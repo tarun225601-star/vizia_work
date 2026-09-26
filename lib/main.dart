@@ -1,6 +1,21 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_database/firebase_database.dart';
+import 'package:firebase_database/ui/firebase_animated_list.dart';
+import 'package:image_picker/image_picker.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: const FirebaseOptions(
+      apiKey: "AIzaSyDummyKeyForViziawork",
+      appId: "1:23456789:android:abcdef",
+      messagingSenderId: "123456789",
+      projectId: "viziawork",
+      databaseURL: "https://viziawork-default-rtdb.firebaseio.com/",
+    ),
+  );
   runApp(const ViziaworkApp());
 }
 
@@ -23,7 +38,7 @@ class ViziaworkApp extends StatelessWidget {
 }
 
 // ---------------------------------------------------------
-// 1. LOGIN & PHONE AUTH SCREEN
+// 1. LOGIN SCREEN
 // ---------------------------------------------------------
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -43,7 +58,6 @@ class _LoginScreenState extends State<LoginScreen> {
       );
       return;
     }
-    // सीधा रोल सिलेक्शन स्क्रीन पर भेजें
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (context) => RoleSelectionScreen(phone: phone)),
@@ -94,7 +108,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     backgroundColor: Colors.blue,
                   ),
-                  child: const Text('लॉगिन करें (Get OTP / Continue)', style: TextStyle(fontSize: 18, color: Colors.white)),
+                  child: const Text('लॉगिन करें (Continue)', style: TextStyle(fontSize: 18, color: Colors.white)),
                 ),
               ],
             ),
@@ -106,7 +120,7 @@ class _LoginScreenState extends State<LoginScreen> {
 }
 
 // ---------------------------------------------------------
-// 2. ROLE SELECTION SCREEN (Worker or Client)
+// 2. ROLE SELECTION SCREEN
 // ---------------------------------------------------------
 class RoleSelectionScreen extends StatelessWidget {
   final String phone;
@@ -130,14 +144,13 @@ class RoleSelectionScreen extends StatelessWidget {
             const SizedBox(height: 40),
             ElevatedButton.icon(
               onPressed: () {
-                // Worker Dashboard पर जाएं
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(builder: (context) => SubscriptionCheckScreen(role: 'worker', phone: phone)),
                 );
               },
               icon: const Icon(Icons.handyman, size: 28),
-              label: const Text('मुझे काम चाहिए (Worker / मिस्त्री / लेबर)', style: TextStyle(fontSize: 16)),
+              label: const Text('मुझे काम चाहिए (Worker / मिस्त्री)', style: TextStyle(fontSize: 16)),
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.all(20),
                 backgroundColor: Colors.orange,
@@ -148,7 +161,6 @@ class RoleSelectionScreen extends StatelessWidget {
             const SizedBox(height: 20),
             ElevatedButton.icon(
               onPressed: () {
-                // Client Dashboard पर जाएं
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(builder: (context) => SubscriptionCheckScreen(role: 'client', phone: phone)),
@@ -180,10 +192,6 @@ class SubscriptionCheckScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // यहाँ हम चेक करेंगे कि यूजर का ₹100 सब्सक्रिप्शन एक्टिव है या नहीं।
-    // अभी के लिए डेमो पर्पस से पास एक्टिव मानकर आगे बढ़ा रहे हैं।
-    bool isSubscribed = true; // इसे डेटाबेस से फेच करेंगे
-
     return Scaffold(
       appBar: AppBar(title: const Text('Viziawork - सब्सक्रिप्शन पास')),
       body: Padding(
@@ -233,7 +241,7 @@ class SubscriptionCheckScreen extends StatelessWidget {
 }
 
 // ---------------------------------------------------------
-// 4. CLIENT DASHBOARD (काम डालने वाला)
+// 4. CLIENT DASHBOARD (Realtime Database - Post Job with Gallery/Camera Image)
 // ---------------------------------------------------------
 class ClientDashboard extends StatefulWidget {
   final String phone;
@@ -249,9 +257,21 @@ class _ClientDashboardState extends State<ClientDashboard> {
   final TextEditingController _budgetController = TextEditingController();
   final TextEditingController _locationController = TextEditingController();
 
-  final List<Map<String, String>> _myPostedJobs = [];
+  File? _selectedImage; // चुनी गई फोटो को होल्ड करने के लिए
+  bool _isLoading = false;
+  final DatabaseReference _dbRef = FirebaseDatabase.instance.ref().child('jobs');
 
-  void _postJob() {
+  // गैलरी या कैमरा से फोटो चुनने का फंक्शन
+  Future<void> _pickImage(ImageSource source) async {
+    final pickedFile = await ImagePicker().pickImage(source: source, imageQuality: 70);
+    if (pickedFile != null) {
+      setState(() {
+        _selectedImage = File(pickedFile.path);
+      });
+    }
+  }
+
+  Future<void> _postJob() async {
     if (_titleController.text.isEmpty || _budgetController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('कृपया काम का नाम और बजट भरें')),
@@ -259,23 +279,43 @@ class _ClientDashboardState extends State<ClientDashboard> {
       return;
     }
 
-    setState(() {
-      _myPostedJobs.add({
-        'title': _titleController.text,
-        'desc': _descController.text,
-        'budget': _budgetController.text,
-        'location': _locationController.text,
+    setState(() => _isLoading = true);
+
+    try {
+      // नोट: अभी के लिए हम फोटो पाथ या डमी यूआरएल भेज रहे हैं। 
+      // असली ऐप में फोटो को Firebase Storage पर अपलोड करके उसका URL निकाला जाता है।
+      String imagePathOrUrl = _selectedImage != null ? _selectedImage!.path : '';
+
+      DatabaseReference newJobRef = _dbRef.push();
+      await newJobRef.set({
+        'id': newJobRef.key,
+        'title': _titleController.text.trim(),
+        'description': _descController.text.trim(),
+        'budget': _budgetController.text.trim(),
+        'location': _locationController.text.trim(),
+        'imageUrl': imagePathOrUrl, 
+        'clientPhone': widget.phone,
+        'status': 'Active',
       });
-    });
 
-    _titleController.clear();
-    _descController.clear();
-    _budgetController.clear();
-    _locationController.clear();
+      _titleController.clear();
+      _descController.clear();
+      _budgetController.clear();
+      _locationController.clear();
+      setState(() {
+        _selectedImage = null;
+      });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('काम सफलतापूर्वक पोस्ट कर दिया गया है!')),
-    );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('काम सफलतापूर्वक पब्लिश हो गया!')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('एरर: $e')),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -309,33 +349,60 @@ class _ClientDashboardState extends State<ClientDashboard> {
               controller: _locationController,
               decoration: const InputDecoration(labelText: 'लोकेशन/सेक्टर (जैसे: Sector 15, Faridabad)', border: OutlineInputBorder(), filled: true, fillColor: Colors.white),
             ),
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: _postJob,
-              icon: const Icon(Icons.add),
-              label: const Text('काम पब्लिश करें (Post Job)'),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white, padding: const EdgeInsets.all(14)),
+            const SizedBox(height: 15),
+
+            // फोटो दिखाने और चुनने के लिए UI
+            const Text('काम की फोटो जोड़ें:', style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _pickImage(ImageSource.camera),
+                    icon: const Icon(Icons.camera_alt),
+                    label: const Text('कैमरा से खींचें'),
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.orange, foregroundColor: Colors.white),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _pickImage(ImageSource.gallery),
+                    icon: const Icon(Icons.photo_library),
+                    label: const Text('गैलरी से चुनें'),
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.blueGrey, foregroundColor: Colors.white),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 30),
-            const Text('आपके द्वारा डाले गए काम', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 10),
-            _myPostedJobs.isEmpty
-                ? const Text('अभी तक कोई काम नहीं डाला गया है।', style: TextStyle(color: Colors.grey))
-                : ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: _myPostedJobs.length,
-                    itemBuilder: (context, index) {
-                      var job = _myPostedJobs[index];
-                      return Card(
-                        margin: const EdgeInsets.symmetric(vertical: 6),
-                        child: ListTile(
-                          title: Text(job['title']!, style: const TextStyle(fontWeight: FontWeight.bold)),
-                          subtitle: Text('लोकेशन: ${job['location']}\nबजट: ₹${job['budget']}'),
-                          trailing: const Text('Active', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
-                        ),
-                      );
-                    },
+
+            // चुनी गई फोटो का प्रीव्यू
+            if (_selectedImage != null) ...[
+              Stack(
+                alignment: Alignment.topRight,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: Image.file(_selectedImage!, height: 150, width: double.infinity, fit: BoxFit.cover),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.cancel, color: Colors.red, size: 30),
+                    onPressed: () => setState(() => _selectedImage = null),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+            ],
+
+            const SizedBox(height: 10),
+            _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : ElevatedButton.icon(
+                    onPressed: _postJob,
+                    icon: const Icon(Icons.cloud_upload),
+                    label: const Text('काम पब्लिश करें (Post Job)'),
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white, padding: const EdgeInsets.all(14)),
                   ),
           ],
         ),
@@ -345,7 +412,7 @@ class _ClientDashboardState extends State<ClientDashboard> {
 }
 
 // ---------------------------------------------------------
-// 5. WORKER DASHBOARD (काम करने वाला / मिस्त्री)
+// 5. WORKER DASHBOARD (Realtime Database - Live Feed)
 // ---------------------------------------------------------
 class WorkerDashboard extends StatelessWidget {
   final String phone;
@@ -353,12 +420,7 @@ class WorkerDashboard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // डेमो के लिए उपलब्ध काम की लिस्ट
-    final List<Map<String, String>> availableJobs = [
-      {'title': 'बाथरूम का नल लीक ठीक करना है', 'budget': '₹500', 'location': 'Sector 15, Faridabad', 'phone': '98765XXXXX'},
-      {'title': 'घर की वायरिंग चेक करनी है', 'budget': '₹1200', 'location': 'Sector 16, Faridabad', 'phone': '91234XXXXX'},
-      {'title': 'दीवार पर पेंट करवाना है', 'budget': '₹3000', 'location': 'Sector 10, Faridabad', 'phone': '99887XXXXX'},
-    ];
+    DatabaseReference jobsRef = FirebaseDatabase.instance.ref().child('jobs');
 
     return Scaffold(
       appBar: AppBar(title: const Text('लेबर/मिस्त्री डैशबोर्ड (Worker Panel)')),
@@ -367,13 +429,22 @@ class WorkerDashboard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('आपके आसपास उपलब्ध काम (Available Jobs)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const Text('आपके आसपास उपलब्ध लाइव काम', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 10),
             Expanded(
-              child: ListView.builder(
-                itemCount: availableJobs.length,
-                itemBuilder: (context, index) {
-                  var job = availableJobs[index];
+              child: FirebaseAnimatedList(
+                query: jobsRef,
+                itemBuilder: (context, snapshot, animation, index) {
+                  final json = snapshot.value as Map<dynamic, dynamic>?;
+                  if (json == null) return const SizedBox.shrink();
+
+                  String title = json['title'] ?? '';
+                  String desc = json['description'] ?? '';
+                  String location = json['location'] ?? '';
+                  String budget = json['budget'] ?? '';
+                  String imageUrl = json['imageUrl'] ?? '';
+                  String clientPhone = json['clientPhone'] ?? '';
+
                   return Card(
                     margin: const EdgeInsets.symmetric(vertical: 8),
                     elevation: 2,
@@ -383,11 +454,23 @@ class WorkerDashboard extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(job['title']!, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                          // अगर लोकल फाइल पाथ या यूआरएल मौजूद है
+                          if (imageUrl.isNotEmpty) ...[
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: imageUrl.startsWith('http')
+                                  ? Image.network(imageUrl, height: 180, width: double.infinity, fit: BoxFit.cover)
+                                  : Image.file(File(imageUrl), height: 180, width: double.infinity, fit: BoxFit.cover),
+                            ),
+                            const SizedBox(height: 10),
+                          ],
+                          Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                           const SizedBox(height: 6),
-                          Text('लोकेशन: ${job['location']}', style: const TextStyle(color: Colors.grey)),
+                          Text('विवरण: $desc', style: const TextStyle(color: Colors.black87)),
                           const SizedBox(height: 4),
-                          Text('मजदूरी/बजट: ${job['budget']}', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 16)),
+                          Text('लोकेशन: $location', style: const TextStyle(color: Colors.grey)),
+                          const SizedBox(height: 4),
+                          Text('मजदूरी/बजट: ₹$budget', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 16)),
                           const Divider(height: 20),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -396,7 +479,7 @@ class WorkerDashboard extends StatelessWidget {
                               ElevatedButton.icon(
                                 onPressed: () {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('कांटेक्ट नंबर: ${job['phone']} (सीधा कॉल करें)')),
+                                    SnackBar(content: Text('मालिक को कॉल करें: $clientPhone')),
                                   );
                                 },
                                 icon: const Icon(Icons.phone, size: 16),
