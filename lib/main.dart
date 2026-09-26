@@ -4,7 +4,6 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_database/ui/firebase_animated_list.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -364,7 +363,7 @@ class _ClientDashboardState extends State<ClientDashboard> {
 }
 
 // ---------------------------------------------------------
-// 4. WORKER DASHBOARD (Independent Job Unlock System)
+// 4. WORKER DASHBOARD (Independent Job Unlock via UPI Dialog)
 // ---------------------------------------------------------
 class WorkerDashboard extends StatefulWidget {
   final String phone;
@@ -375,51 +374,47 @@ class WorkerDashboard extends StatefulWidget {
 }
 
 class _WorkerDashboardState extends State<WorkerDashboard> {
-  // यह सेट (Set) याद रखेगा कि किस-किस खास जॉब आईडी (jobId) का पेमेंट हो चुका है
   final Set<String> _unlockedJobIds = {};
+  final String myUpiId = "tarun@paytm"; // यहाँ अपनी सही UPI ID डाल देना भाई
 
-  final String myUpiId = "tarun@paytm"; // यहाँ अपनी UPI ID डाल देना भाई
-
-  void _payAndUnlock(String jobId, String clientPhone, String location) async {
-    final Uri upiUri = Uri.parse(
-      "upi://pay?pa=$myUpiId&pn=Viziawork&am=10.00&cu=INR&tn=Unlock_Job_$jobId",
-    );
-
-    try {
-      if (await canLaunchUrl(upiUri)) {
-        await launchUrl(upiUri, mode: LaunchMode.externalApplication);
-      }
-      _showPaymentSuccessDialog(jobId);
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('पेमेंट एरर: $e')),
-      );
-    }
-  }
-
-  void _showPaymentSuccessDialog(String jobId) {
+  void _showUnlockDialog(String jobId, String clientPhone, String location) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('पेमेंट कन्फर्मेशन'),
-        content: const Text('क्या आपने ₹10 का भुगतान कर दिया है?'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('₹10 भुगतान करें', style: TextStyle(fontWeight: FontWeight.w900)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('इस काम का नंबर और पूरा पता देखने के लिए ₹10 का भुगतान इस UPI ID पर करें:'),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(10)),
+              child: Text(myUpiId, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            ),
+            const SizedBox(height: 12),
+            const Text('पेमेंट करने के बाद नीचे दिए गए बटन पर क्लिक करें।'),
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('नहीं'),
+            child: const Text('रद्द करें', style: TextStyle(color: Colors.grey)),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.black),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.black, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
             onPressed: () {
               setState(() {
-                _unlockedJobIds.add(jobId); // केवल इसी खास पोस्ट का ताला खुलेगा!
+                _unlockedJobIds.add(jobId); // केवल इसी खास पोस्ट का ताला खुलेगा
               });
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('इस काम का नंबर और पता सफलतापूर्वक खुल गया है!')),
+                const SnackBar(content: Text('नंबर और पता अनलॉक हो गया!')),
               );
             },
-            child: const Text('हाँ, हो गया', style: TextStyle(color: Colors.white)),
+            child: const Text('पेमेंट हो गया, खोलें', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -458,7 +453,6 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
           final json = snapshot.value as Map<dynamic, dynamic>?;
           if (json == null) return const SizedBox.shrink();
 
-          // हर पोस्ट की अपनी यूनीक डेटाबेस की (Key) होती है
           String jobId = snapshot.key ?? index.toString();
           String title = json['title'] ?? '';
           String desc = json['description'] ?? '';
@@ -467,7 +461,6 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
           String imageUrl = json['imageUrl'] ?? '';
           String clientPhone = json['clientPhone'] ?? '';
 
-          // चेक करें कि क्या इस खास जॉब आईडी को वर्कर ने अनलॉक किया है या नहीं
           bool isThisJobUnlocked = _unlockedJobIds.contains(jobId);
 
           return Container(
@@ -510,7 +503,6 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
                       Text(desc, style: const TextStyle(fontSize: 15, color: Colors.black54, fontWeight: FontWeight.w500)),
                       const SizedBox(height: 12),
                       
-                      // लोकेशन (अगर इस पोस्ट का पेमेंट हुआ है तभी दिखेगा)
                       Row(
                         children: [
                           const Icon(Icons.location_on, size: 16, color: Colors.grey),
@@ -532,7 +524,6 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
                         child: Divider(color: Colors.black12),
                       ),
 
-                      // मालिक का नंबर और अनलॉक बटन (हर पोस्ट के लिए अलग)
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -549,7 +540,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
                               if (isThisJobUnlocked) {
                                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('कॉल कर रहे हैं: $clientPhone')));
                               } else {
-                                _payAndUnlock(jobId, clientPhone, location);
+                                _showUnlockDialog(jobId, clientPhone, location);
                               }
                             },
                             icon: Icon(isThisJobUnlocked ? Icons.call : Icons.lock, size: 18, color: Colors.white),
