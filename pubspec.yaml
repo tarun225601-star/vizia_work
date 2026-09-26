@@ -1,7 +1,6 @@
 name: viziawork
-description: "Viziawork - रोजी-रोटी का सीधा ठिकाना"
+description: "A new Flutter project connecting local laborers with clients."
 publish_to: 'none'
-
 version: 1.0.0+1
 
 environment:
@@ -13,10 +12,14 @@ dependencies:
   cupertino_icons: ^1.0.6
   firebase_core: ^2.27.0
   firebase_database: ^10.4.9
-  image_picker: ^1.0.7        # गैलरी और कैमरा से फोटो लेने के लिए
+  image_picker: ^1.0.7
 
 dev_dependencies:
+  flutter_test:
+    sdk: flutter
   flutter_lints: ^3.0.0
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/
