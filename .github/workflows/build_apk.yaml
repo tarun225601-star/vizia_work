@@ -1,40 +1,38 @@
-name: Build Viziawork APK
-
-on:
-  push:
-    branches: [ "main", "master" ]
-  pull_request:
-    branches: [ "main", "master" ]
-
+name: Flutter APK Build
+on: [push]
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Set up Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v3
         with:
-          distribution: 'zulu'
+          distribution: 'temurin'
           java-version: '17'
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.x' # या जो वर्जन तू इस्तेमाल कर रहा है
+          flutter-version: '3.19.6'
           channel: 'stable'
-          cache: true
 
-      - name: Install Dependencies
+      - name: Get Dependencies
         run: flutter pub get
 
-      - name: Build APK (Release)
+      - name: Clean & Recreate Android Project
+        run: |
+          rm -rf android
+          flutter create . --platforms=android
+
+      - name: Build APK
         run: flutter build apk --release
+        env:
+          ORG_GRADLE_PROJECT_jvmargs: "-Xmx4g -XX:MaxMetaspaceSize=512m"
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: viziawork-release-apk
+          name: app-release-apk
           path: build/app/outputs/flutter-apk/app-release.apk
