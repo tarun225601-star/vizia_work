@@ -19,7 +19,3 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-
-  # अगर आगे चलकर कस्टम फोंट या इमेज जोड़नी हों, तो यहाँ एसेट्स सेट किए जाएंगे
-  # assets:
-  #   - assets/images/
