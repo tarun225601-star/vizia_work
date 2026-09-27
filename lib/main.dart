@@ -49,7 +49,7 @@ class ViziaworkApp extends StatelessWidget {
 }
 
 // ---------------------------------------------------------
-// 1. LOGIN SCREEN (Mobile Number Input)
+// 1. LOGIN SCREEN
 // ---------------------------------------------------------
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -215,7 +215,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
 }
 
 // ---------------------------------------------------------
-// 3. PROFILE SETUP SCREEN (अब फोटो जोड़ने के ऑप्शन के साथ)
+// 3. PROFILE SETUP SCREEN
 // ---------------------------------------------------------
 class ProfileSetupScreen extends StatefulWidget {
   final String phone;
@@ -278,8 +278,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
           children: [
             const Text('Viziawork में आपका स्वागत है!\nअपनी सही जानकारी भरें और प्रोफाइल फोटो लगाएं।', style: TextStyle(fontSize: 16, color: Colors.grey)),
             const SizedBox(height: 20),
-            
-            // प्रोफाइल फोटो चुनने का सेक्शन
             Center(
               child: GestureDetector(
                 onTap: _pickProfileImage,
@@ -368,7 +366,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
 }
 
 // ---------------------------------------------------------
-// 4. CLIENT DASHBOARD (Post, Edit, Delete, Manage Posts)
+// 4. CLIENT DASHBOARD
 // ---------------------------------------------------------
 class ClientDashboard extends StatefulWidget {
   final String phone;
@@ -491,7 +489,7 @@ class _ClientDashboardState extends State<ClientDashboard> {
       length: 2,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('क्लाइंट डैशबोर्ड (मैनेज पोस्ट)'),
+          title: const Text('क्लाइंट डैशबोर्ड'),
           actions: [
             IconButton(
               icon: const Icon(Icons.person),
@@ -504,7 +502,7 @@ class _ClientDashboardState extends State<ClientDashboard> {
             indicatorColor: Colors.black,
             tabs: [
               Tab(text: 'नया काम पोस्ट करें', icon: Icon(Icons.add_circle)),
-              Tab(text: 'मेरी पोस्ट्स (List & Manage)', icon: Icon(Icons.list)),
+              Tab(text: 'मेरी पोस्ट्स', icon: Icon(Icons.list)),
             ],
           ),
         ),
@@ -572,7 +570,7 @@ class TextLinkEdit {
 }
 
 // ---------------------------------------------------------
-// 5. WORKER DASHBOARD (View All Jobs, UPI Unlock & Worker Profile/Rating)
+// 5. WORKER DASHBOARD (यहाँ पोस्ट की फोटो दिखाने का कोड जोड़ दिया है)
 // ---------------------------------------------------------
 class WorkerDashboard extends StatefulWidget {
   final String phone;
@@ -665,6 +663,9 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
 
           String jobId = snapshot.key ?? '';
           bool isUnlocked = _unlockedJobIds.contains(jobId);
+          
+          // पोस्ट की इमेज फेच करना (Base64 लिस्ट से)
+          List<dynamic> imagesList = json['images'] ?? [];
 
           return Card(
             margin: const EdgeInsets.all(12),
@@ -676,6 +677,31 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
                   Text(json['title'] ?? '', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 6),
                   Text(json['description'] ?? '', style: const TextStyle(color: Colors.grey)),
+                  const SizedBox(height: 10),
+                  
+                  // अगर पोस्ट में फोटो है, तो यहाँ दिखाएं
+                  if (imagesList.isNotEmpty)
+                    SizedBox(
+                      height: 120,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: imagesList.length,
+                        itemBuilder: (context, imgIndex) {
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8.0),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.memory(
+                                base64Decode(imagesList[imgIndex]),
+                                width: 120,
+                                height: 120,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
                   const SizedBox(height: 10),
                   Text('बजट: ₹${json['budget']}', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
                   Text(isUnlocked ? 'लोकेशन: ${json['location']}' : 'लोकेशन: [₹10 देकर खोलें]', style: TextStyle(color: isUnlocked ? Colors.black : Colors.red)),
@@ -702,7 +728,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
 }
 
 // ---------------------------------------------------------
-// 6. VIEW PROFILE & RATINGS SCREEN (फोटो देखने के साथ)
+// 6. VIEW PROFILE SCREEN
 // ---------------------------------------------------------
 class ViewProfileScreen extends StatelessWidget {
   final String phone;
