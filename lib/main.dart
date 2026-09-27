@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
@@ -214,7 +216,7 @@ class RoleSelectionScreen extends StatelessWidget {
 }
 
 // ---------------------------------------------------------
-// 3. CLIENT DASHBOARD (Post Job)
+// 3. CLIENT DASHBOARD (Post Job with Multiple Images & 1 Video Base64)
 // ---------------------------------------------------------
 class ClientDashboard extends StatefulWidget {
   final String phone;
@@ -229,13 +231,43 @@ class _ClientDashboardState extends State<ClientDashboard> {
   final TextEditingController _descController = TextEditingController();
   final TextEditingController _budgetController = TextEditingController();
   final TextEditingController _locationController = TextEditingController();
-  File? _selectedImage;
+  
+  List<String> _selectedImagesBase64 = [];
+  String? _selectedVideoBase64;
   bool _isLoading = false;
   final DatabaseReference _dbRef = FirebaseDatabase.instance.ref().child('jobs');
 
-  Future<void> _pickImage(ImageSource source) async {
-    final pickedFile = await ImagePicker().pickImage(source: source, imageQuality: 70);
-    if (pickedFile != null) setState(() => _selectedImage = File(pickedFile.path));
+  // बहुमूल्य फोटो चुनने के लिए (अधिकतम 5)
+  Future<void> _pickImages() async {
+    final picker = ImagePicker();
+    final pickedFiles = await picker.pickMultiImage(imageQuality: 50);
+    if (pickedFiles.isNotEmpty) {
+      for (var file in pickedFiles) {
+        if (_selectedImagesBase64.length < 5) {
+          File imgFile = File(file.path);
+          List<int> imageBytes = await imgFile.readAsBytes();
+          String base64Image = base64Encode(imageBytes);
+          setState(() {
+            _selectedImagesBase64.add(base64Image);
+          });
+        }
+      }
+    }
+  }
+
+  // एक वीडियो चुनने के लिए
+  Future<void> _pickVideo() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickVideo(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      File vidFile = File(pickedFile.path);
+      List<int> videoBytes = await vidFile.readAsBytes();
+      String base64Video = base64Encode(videoBytes);
+      setState(() {
+        _selectedVideoBase64 = base64Video;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('वीडियो सफलतापूर्वक जोड़ ली गई है!')));
+    }
   }
 
   Future<void> _postJob() async {
@@ -252,13 +284,22 @@ class _ClientDashboardState extends State<ClientDashboard> {
         'description': _descController.text.trim(),
         'budget': _budgetController.text.trim(),
         'location': _locationController.text.trim(),
-        'imageUrl': _selectedImage != null ? _selectedImage!.path : '',
+        'images': _selectedImagesBase64, // बेस64 फोटो लिस्ट
+        'video': _selectedVideoBase64 ?? '', // बेस64 वीडियो स्ट्रिंग
         'clientPhone': widget.phone,
         'timestamp': ServerValue.timestamp,
       });
-      _titleController.clear(); _descController.clear(); _budgetController.clear(); _locationController.clear();
-      setState(() => _selectedImage = null);
+      _titleController.clear(); 
+      _descController.clear(); 
+      _budgetController.clear(); 
+      _locationController.clear();
+      setState(() {
+        _selectedImagesBase64.clear();
+        _selectedVideoBase64 = null;
+      });
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('काम पब्लिश हो गया!')));
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('त्रुटि: $e')));
     } finally {
       setState(() => _isLoading = false);
     }
@@ -299,7 +340,7 @@ class _ClientDashboardState extends State<ClientDashboard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildBlinkitTextField('काम का नाम (जैसे: प्लंबिंग)', _titleController, Icons.work_outline),
+            _buildBlinkitTextField('काम का नाम (जैसे: pcc, plaster)', _titleController, Icons.work_outline),
             const SizedBox(height: 16),
             _buildBlinkitTextField('काम का विवरण', _descController, Icons.description_outlined, maxLines: 3),
             const SizedBox(height: 16),
@@ -307,22 +348,78 @@ class _ClientDashboardState extends State<ClientDashboard> {
             const SizedBox(height: 16),
             _buildBlinkitTextField('लोकेशन / पूरा पता', _locationController, Icons.location_on_outlined),
             const SizedBox(height: 24),
-            const Text('काम की फोटो:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+            
+            const Text('काम की फोटो (अधिकतम 5):', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
             const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(child: _buildImageBtn('कैमरा', Icons.camera_alt, ImageSource.camera)),
-                const SizedBox(width: 12),
-                Expanded(child: _buildImageBtn('गैलरी', Icons.photo_library, ImageSource.gallery)),
-              ],
+            OutlinedButton.icon(
+              onPressed: _pickImages,
+              icon: const Icon(Icons.photo_library, color: Colors.black),
+              label: Text('गैलरी से फोटो चुनें (${_selectedImagesBase64.length}/5)', style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                backgroundColor: Colors.white,
+                side: const BorderSide(color: Colors.black12, width: 2),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
             ),
-            if (_selectedImage != null) ...[
-              const SizedBox(height: 16),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: Image.file(_selectedImage!, height: 200, width: double.infinity, fit: BoxFit.cover),
-              )
-            ]
+            if (_selectedImagesBase64.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 100,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _selectedImagesBase64.length,
+                  itemBuilder: (context, index) {
+                    return Container(
+                      margin: const EdgeInsets.only(right: 10),
+                      child: Stack(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.memory(
+                              base64Decode(_selectedImagesBase64[index]),
+                              width: 100,
+                              height: 100,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                          Positioned(
+                            top: 4,
+                            right: 4,
+                            child: GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _selectedImagesBase64.removeAt(index);
+                                });
+                              },
+                              child: Container(
+                                decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                                child: const Icon(Icons.close, color: Colors.white, size: 20),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+            
+            const SizedBox(height: 24),
+            const Text('काम का वीडियो (1 वीडियो):', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: _pickVideo,
+              icon: const Icon(Icons.video_call, color: Colors.black),
+              label: Text(_selectedVideoBase64 == null ? 'वीडियो चुनें' : 'वीडियो जुड़ चुकी है (बदलें)', style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                backgroundColor: Colors.white,
+                side: const BorderSide(color: Colors.black12, width: 2),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+            ),
           ],
         ),
       ),
@@ -346,24 +443,10 @@ class _ClientDashboardState extends State<ClientDashboard> {
       ),
     );
   }
-
-  Widget _buildImageBtn(String text, IconData icon, ImageSource source) {
-    return OutlinedButton.icon(
-      onPressed: () => _pickImage(source),
-      icon: Icon(icon, color: Colors.black),
-      label: Text(text, style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-      style: OutlinedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        backgroundColor: Colors.white,
-        side: const BorderSide(color: Colors.black12, width: 2),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      ),
-    );
-  }
 }
 
 // ---------------------------------------------------------
-// 4. WORKER DASHBOARD (Independent Job Unlock via UPI Dialog)
+// 4. WORKER DASHBOARD
 // ---------------------------------------------------------
 class WorkerDashboard extends StatefulWidget {
   final String phone;
@@ -375,7 +458,7 @@ class WorkerDashboard extends StatefulWidget {
 
 class _WorkerDashboardState extends State<WorkerDashboard> {
   final Set<String> _unlockedJobIds = {};
-  final String myUpiId = "tarun@paytm"; // यहाँ अपनी सही UPI ID डाल देना भाई
+  final String myUpiId = "tarun@paytm"; 
 
   void _showUnlockDialog(String jobId, String clientPhone, String location) {
     showDialog(
@@ -407,7 +490,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
             style: ElevatedButton.styleFrom(backgroundColor: Colors.black, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
             onPressed: () {
               setState(() {
-                _unlockedJobIds.add(jobId); // केवल इसी खास पोस्ट का ताला खुलेगा
+                _unlockedJobIds.add(jobId);
               });
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
@@ -458,8 +541,11 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
           String desc = json['description'] ?? '';
           String location = json['location'] ?? '';
           String budget = json['budget'] ?? '';
-          String imageUrl = json['imageUrl'] ?? '';
           String clientPhone = json['clientPhone'] ?? '';
+          
+          // फेच की गई इमेज और वीडियो लिस्ट/स्ट्रिंग
+          List<dynamic> imagesList = json['images'] ?? [];
+          String videoBase64 = json['video'] ?? '';
 
           bool isThisJobUnlocked = _unlockedJobIds.contains(jobId);
 
@@ -473,13 +559,33 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (imageUrl.isNotEmpty)
-                  ClipRRect(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                    child: imageUrl.startsWith('http')
-                        ? Image.network(imageUrl, height: 160, width: double.infinity, fit: BoxFit.cover)
-                        : Image.file(File(imageUrl), height: 160, width: double.infinity, fit: BoxFit.cover),
+                // अगर फोटो मौजूद हैं तो होरिजॉन्टल स्लाइडर में दिखाएं
+                if (imagesList.isNotEmpty)
+                  SizedBox(
+                    height: 180,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: imagesList.length,
+                      itemBuilder: (context, imgIndex) {
+                        try {
+                          Uint8List decodedBytes = base64Decode(imagesList[imgIndex]);
+                          return Container(
+                            width: 250,
+                            margin: const EdgeInsets.only(right: 8),
+                            child: ClipRRect(
+                              borderRadius: imgIndex == 0 
+                                  ? const BorderRadius.horizontal(left: Radius.circular(20))
+                                  : BorderRadius.circular(0),
+                              child: Image.memory(decodedBytes, fit: BoxFit.cover),
+                            ),
+                          );
+                        } catch (e) {
+                          return const SizedBox.shrink();
+                        }
+                      },
+                    ),
                   ),
+
                 Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
@@ -487,75 +593,66 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
                     children: [
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Expanded(
-                            child: Text(title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.black)),
+                            child: Text(title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                            decoration: BoxDecoration(color: Colors.green.shade50, borderRadius: BorderRadius.circular(8)),
-                            child: Text('₹$budget', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.green.shade700)),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(color: Colors.green.shade50, borderRadius: BorderRadius.circular(10)),
+                            child: Text('₹$budget', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.green)),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 8),
-                      Text(desc, style: const TextStyle(fontSize: 15, color: Colors.black54, fontWeight: FontWeight.w500)),
-                      const SizedBox(height: 12),
+                      if (desc.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Text(desc, style: const TextStyle(color: Colors.grey, fontSize: 14)),
+                      ],
+                      const SizedBox(height: 16),
                       
+                      // लोकेशन और फोन नंबर सेक्शन (अनलॉक लॉजिक के साथ)
                       Row(
                         children: [
-                          const Icon(Icons.location_on, size: 16, color: Colors.grey),
-                          const SizedBox(width: 4),
+                          const Icon(Icons.location_pin, color: Colors.redAccent, size: 20),
+                          const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              isThisJobUnlocked ? location : '🔒 पूरा पता देखने के लिए ₹10 Pay करें',
+                              isThisJobUnlocked && location.isNotEmpty ? location : 'पूरा पता देखने के लिए ₹10 Pay करें',
                               style: TextStyle(
-                                fontSize: 14, 
-                                color: isThisJobUnlocked ? Colors.black87 : Colors.red.shade700, 
                                 fontWeight: FontWeight.bold,
+                                color: isThisJobUnlocked ? Colors.black : Colors.red,
                               ),
                             ),
                           ),
                         ],
                       ),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 12),
-                        child: Divider(color: Colors.black12),
-                      ),
-
+                      const SizedBox(height: 8),
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
+                          const Icon(Icons.phone, color: Colors.black54, size: 20),
+                          const SizedBox(width: 8),
                           Text(
-                            isThisJobUnlocked ? 'नंबर: $clientPhone' : '🔒 नंबर: [ब्लर किया गया]',
-                            style: TextStyle(
-                              fontSize: 14, 
-                              fontWeight: FontWeight.bold, 
-                              color: isThisJobUnlocked ? Colors.black : Colors.grey,
-                            ),
-                          ),
-                          ElevatedButton.icon(
-                            onPressed: () {
-                              if (isThisJobUnlocked) {
-                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('कॉल कर रहे हैं: $clientPhone')));
-                              } else {
-                                _showUnlockDialog(jobId, clientPhone, location);
-                              }
-                            },
-                            icon: Icon(isThisJobUnlocked ? Icons.call : Icons.lock, size: 18, color: Colors.white),
-                            label: Text(
-                              isThisJobUnlocked ? 'कॉल करें' : '₹10 देकर खोलें', 
-                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: Colors.white),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: isThisJobUnlocked ? Colors.green : Colors.black,
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            ),
+                            isThisJobUnlocked ? clientPhone : 'नंबर: [ब्लर किया गया]',
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                           ),
                         ],
                       ),
+                      const SizedBox(height: 16),
+                      
+                      if (!isThisJobUnlocked)
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.black,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            onPressed: () => _showUnlockDialog(jobId, clientPhone, location),
+                            icon: const Icon(Icons.lock, color: Colors.white, size: 18),
+                            label: const Text('₹10 देकर खोलें', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                          ),
+                        ),
                     ],
                   ),
                 ),
