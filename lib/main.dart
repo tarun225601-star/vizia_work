@@ -310,7 +310,7 @@ class RoleSelectionScreen extends StatelessWidget {
 }
 
 // ---------------------------------------------------------
-// 4. WORKER DIRECTORY & SEARCH SCREEN (बिना किसी फिक्स कैटेगरी के, सीधा सर्च)
+// 4. WORKER DIRECTORY & SEARCH SCREEN (Instagram जैसा Infinite Scroll सिस्टम)
 // ---------------------------------------------------------
 class WorkerDirectoryScreen extends StatefulWidget {
   const WorkerDirectoryScreen({super.key});
@@ -322,8 +322,31 @@ class WorkerDirectoryScreen extends StatefulWidget {
 class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
-  final Query _workersRef = FirebaseDatabase.instance.ref().child('public_workers').limitToFirst(15);
+  
+  // शुरुआत में 15 प्रोफाइल्स लोड होंगी
+  int _displayLimit = 15;
+  final ScrollController _scrollController = ScrollController();
+  final DatabaseReference _workersRef = FirebaseDatabase.instance.ref().child('public_workers');
 
+  @override
+  void initState() {
+    super.initState();
+    // जैसे ही यूजर नीचे स्क्रॉल करेगा, और डेटा लोड हो जाएगा (Instagram स्टाइल)
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+        setState(() {
+          _displayLimit += 15; // 15 और जुड़ जाएंगे
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -333,7 +356,7 @@ class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
       ),
       body: Column(
         children: [
-          // पावरफुल सर्च बार - जो भी टाइप करोगे, उससे जुड़े सारे वर्कर तुरंत सामने आ जाएंगे
+          // पावरफुल सर्च बार
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: TextField(
@@ -367,10 +390,11 @@ class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
             ),
           ),
           const Divider(color: Colors.grey, height: 1),
-          // लाइव वर्कर्स लिस्ट (फिल्टर होकर दिखेगी)
+          // लाइव वर्कर्स लिस्ट (Instagram जैसी स्मूथ लोडिंग के साथ)
           Expanded(
             child: FirebaseAnimatedList(
-              query: _workersRef,
+              query: _workersRef.limitToFirst(_displayLimit),
+              controller: _scrollController,
               itemBuilder: (context, snapshot, animation, index) {
                 if (snapshot.value == null) return Container();
                 Map workerData = snapshot.value as Map;
@@ -483,14 +507,13 @@ class RegisterWorkerScreen extends StatefulWidget {
 }
 
 class _RegisterWorkerScreenState extends State<RegisterWorkerScreen> {
-  final _formKey = GlobalKey<FormState>();
   final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _skillController = TextEditingController(); // हाथ से हुनर लिखने के लिए
   final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _skillController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
-
-  Uint8List? _profileImageBytes;
-  bool _isLoading = false;
+  
+  String? _base64Image;
+  bool _isUploading = false;
 
   Future<void> _pickImage() async {
     final ImagePicker picker = ImagePicker();
@@ -498,42 +521,53 @@ class _RegisterWorkerScreenState extends State<RegisterWorkerScreen> {
     if (image != null) {
       Uint8List bytes = await image.readAsBytes();
       setState(() {
-        _profileImageBytes = bytes;
+        _base64Image = base64Encode(bytes);
       });
     }
   }
 
-  Future<void> _submitProfile() async {
-    if (_formKey.currentState!.validate()) {
-      setState(() {
-        _isLoading = true;
+  void _registerWorker() async {
+    String name = _nameController.text.trim();
+    String phone = _phoneController.text.trim();
+    String skill = _skillController.text.trim();
+    String address = _addressController.text.trim();
+
+    if (name.isEmpty || phone.length < 10 || skill.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('कृपया नाम, सही फोन नंबर और हुनर भरें')),
+      );
+      return;
+    }
+
+    setState(() {
+      _isUploading = true;
+    });
+
+    try {
+      DatabaseReference ref = FirebaseDatabase.instance.ref().child('public_workers').push();
+      await ref.set({
+        'name': name,
+        'phone': phone,
+        'skill': skill,
+        'address': address,
+        'profileImage': _base64Image ?? '',
+        'createdAt': ServerValue.timestamp,
       });
 
-      try {
-        DatabaseReference ref = FirebaseDatabase.instance.ref().child('public_workers').push();
-        String base64Image = _profileImageBytes != null ? base64Encode(_profileImageBytes!) : '';
-
-        await ref.set({
-          'id': ref.key,
-          'name': _nameController.text.trim(),
-          'skill': _skillController.text.trim(), // जो वर्कर टाइप करेगा, वही सेव होगा
-          'phone': _phoneController.text.trim(),
-          'address': _addressController.text.trim(),
-          'profileImage': base64Image,
-          'createdAt': ServerValue.timestamp,
-        });
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('आपकी प्रोफाइल सफलतापूर्वक जुड़ गई है!')),
-        );
-        Navigator.pop(context);
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('एरर: $e')),
-        );
-      } finally {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('बधाई हो! आपकी प्रोफाइल लाइव हो गई है')),
+      );
+      Navigator.pop(context);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('त्रुटि: $e')),
+      );
+    } finally {
+      if (mounted) {
         setState(() {
-          _isLoading = false;
+          _isUploading = false;
         });
       }
     }
@@ -542,96 +576,96 @@ class _RegisterWorkerScreenState extends State<RegisterWorkerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('कारीगर के रूप में रजिस्टर करें')),
+      appBar: AppBar(title: const Text('कारीगर रजिस्ट्रेशन')),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              GestureDetector(
-                onTap: _pickImage,
-                child: CircleAvatar(
-                  radius: 50,
-                  backgroundColor: Colors.grey.shade200,
-                  backgroundImage: _profileImageBytes != null ? MemoryImage(_profileImageBytes!) : null,
-                  child: _profileImageBytes == null
-                      ? const Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.camera_alt, color: Color(0xFF10B981), size: 30),
-                            SizedBox(height: 4),
-                            Text('फोटो लगाएं', style: TextStyle(color: Colors.grey, fontSize: 11)),
-                          ],
-                        )
-                      : null,
-                ),
-              ),
-              const SizedBox(height: 20),
-              TextFormField(
-                controller: _nameController,
-                style: const TextStyle(color: Colors.black),
-                decoration: _inputDecoration('पूरा नाम (Name)', Icons.person),
-                validator: (val) => val!.isEmpty ? 'कृपया नाम दर्ज करें' : null,
-              ),
-              const SizedBox(height: 16),
-              // ड्रॉपडाउन हटाकर यहाँ सिंपल टेक्स्ट बॉक्स दिया है ताकि कोई भी बंदा अपनी मर्जी से कुछ भी हुनर लिख सके
-              TextFormField(
-                controller: _skillController,
-                style: const TextStyle(color: Colors.black),
-                decoration: _inputDecoration('आप क्या काम जानते हैं? (जैसे: मिस्त्री, टंकी साफ, वेल्डर)', Icons.work),
-                validator: (val) => val!.isEmpty ? 'कृपया अपना हुनर/काम दर्ज करें' : null,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _phoneController,
-                keyboardType: TextInputType.phone,
-                style: const TextStyle(color: Colors.black),
-                decoration: _inputDecoration('मोबाइल नंबर (जिस पर लोग कॉल करें)', Icons.phone),
-                validator: (val) => val!.length < 10 ? 'सही मोबाइल नंबर दर्ज करें' : null,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _addressController,
-                maxLines: 2,
-                style: const TextStyle(color: Colors.black),
-                decoration: _inputDecoration('इलाका / पता (Address)', Icons.location_on),
-                validator: (val) => val!.isEmpty ? 'कृपया पता दर्ज करें' : null,
-              ),
-              const SizedBox(height: 30),
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF10B981),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Stack(
+                children: [
+                  CircleAvatar(
+                    radius: 50,
+                    backgroundColor: Colors.grey.shade200,
+                    backgroundImage: _base64Image != null ? MemoryImage(base64Decode(_base64Image!)) : null,
+                    child: _base64Image == null ? const Icon(Icons.person, size: 50, color: Colors.grey) : null,
                   ),
-                  onPressed: _isLoading ? null : _submitProfile,
-                  child: _isLoading
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text(
-                          'प्रोफाइल सेव करें',
-                          style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: InkWell(
+                      onTap: _pickImage,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF10B981),
+                          shape: BoxShape.circle,
                         ),
-                ),
+                        child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 30),
+            TextField(
+              controller: _nameController,
+              decoration: InputDecoration(
+                labelText: 'पूरा नाम',
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _phoneController,
+              keyboardType: TextInputType.phone,
+              decoration: InputDecoration(
+                labelText: 'मोबाइल नंबर',
+                prefixText: '+91 ',
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _skillController,
+              decoration: InputDecoration(
+                labelText: 'अपना हुनर लिखें (जैसे: एसी रिपेयर, कारपेंटर)',
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _addressController,
+              decoration: InputDecoration(
+                labelText: 'पता / एरिया (जैसे: सेक्टर 15, फरीदाबाद)',
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+            ),
+            const SizedBox(height: 30),
+            ElevatedButton(
+              onPressed: _isUploading ? null : _registerWorker,
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 18),
+                backgroundColor: const Color(0xFF10B981),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+              child: _isUploading
+                  ? const CircularProgressIndicator(color: Colors.white)
+                  : const Text('प्रोफाइल लाइव करें', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
         ),
       ),
-    );
-  }
-
-  InputDecoration _inputDecoration(String label, IconData icon) {
-    return InputDecoration(
-      labelText: label,
-      labelStyle: const TextStyle(color: Colors.grey),
-      prefixIcon: Icon(icon, color: const Color(0xFF10B981)),
-      filled: true,
-      fillColor: Colors.white,
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.shade300)),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.shade300)),
     );
   }
 }
