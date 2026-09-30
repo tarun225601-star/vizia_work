@@ -31,17 +31,17 @@ class ViziaworkApp extends StatelessWidget {
       title: 'Viziawork',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF0A0E1A),
+        brightness: Brightness.light, // वाइट थीम
+        scaffoldBackgroundColor: const Color(0xFFF9FAFB),
         primaryColor: const Color(0xFF10B981),
         fontFamily: 'Roboto',
         appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF111827),
-          foregroundColor: Colors.white,
-          elevation: 0,
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.black,
+          elevation: 1,
           centerTitle: false,
-          titleTextStyle: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
-          iconTheme: IconThemeData(color: Colors.white),
+          titleTextStyle: TextStyle(color: Colors.black, fontSize: 20, fontWeight: FontWeight.bold),
+          iconTheme: IconThemeData(color: Colors.black),
         ),
       ),
       home: const LoginScreen(),
@@ -79,7 +79,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0E1A),
+      backgroundColor: const Color(0xFFF9FAFB),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
@@ -91,9 +91,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: const Color(0xFF1F2937),
+                  color: Colors.white,
                   boxShadow: [
-                    BoxShadow(color: const Color(0xFF10B981).withOpacity(0.3), blurRadius: 20, spreadRadius: 5)
+                    BoxShadow(color: Colors.grey.withOpacity(0.2), blurRadius: 20, spreadRadius: 5)
                   ],
                 ),
                 child: const Icon(Icons.flash_on_rounded, size: 50, color: Color(0xFF10B981)),
@@ -102,7 +102,7 @@ class _LoginScreenState extends State<LoginScreen> {
               const Text(
                 'Viziawork',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 38, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -1),
+                style: TextStyle(fontSize: 38, fontWeight: FontWeight.w900, color: Colors.black, letterSpacing: -1),
               ),
               const SizedBox(height: 8),
               const Text(
@@ -114,15 +114,16 @@ class _LoginScreenState extends State<LoginScreen> {
               TextField(
                 controller: _phoneController,
                 keyboardType: TextInputType.phone,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black),
                 decoration: InputDecoration(
                   labelText: 'मोबाइल नंबर दर्ज करें',
                   labelStyle: const TextStyle(color: Colors.grey),
                   prefixText: '+91 ',
                   prefixStyle: const TextStyle(fontSize: 18, color: Color(0xFF10B981), fontWeight: FontWeight.bold),
                   filled: true,
-                  fillColor: const Color(0xFF111827),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.shade300)),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.shade300)),
                   focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF10B981), width: 2)),
                 ),
               ),
@@ -133,9 +134,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   padding: const EdgeInsets.symmetric(vertical: 18),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   backgroundColor: const Color(0xFF10B981),
-                  elevation: 5,
+                  elevation: 2,
                 ),
-                child: const Text('OTP भेजें', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black)),
+                child: const Text('OTP भेजें', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
               ),
             ],
           ),
@@ -187,25 +188,27 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF9FAFB),
       appBar: AppBar(title: const Text('OTP सत्यापन')),
       body: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('+91 ${widget.phone} पर भेजा गया OTP यहाँ दर्ज करें:', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+            Text('+91 ${widget.phone} पर भेजा गया OTP यहाँ दर्ज करें:', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
             const SizedBox(height: 20),
             TextField(
               controller: _otpController,
               keyboardType: TextInputType.number,
               maxLength: 4,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 8, color: Colors.white),
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 8, color: Colors.black),
               decoration: InputDecoration(
                 hintText: '1234',
                 hintStyle: const TextStyle(color: Colors.grey),
                 filled: true,
-                fillColor: const Color(0xFF111827),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                fillColor: Colors.white,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.shade300)),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.shade300)),
               ),
             ),
             const SizedBox(height: 20),
@@ -216,7 +219,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                 backgroundColor: const Color(0xFF10B981),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               ),
-              child: const Text('सत्यापित करें', style: TextStyle(fontSize: 18, color: Colors.black, fontWeight: FontWeight.bold)),
+              child: const Text('सत्यापित करें', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
             ),
           ],
         ),
@@ -281,6 +284,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF9FAFB),
       appBar: AppBar(title: const Text('अपनी प्रोफाइल बनाएं')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
@@ -296,7 +300,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                   children: [
                     CircleAvatar(
                       radius: 50,
-                      backgroundColor: const Color(0xFF1F2937),
+                      backgroundColor: Colors.grey.shade200,
                       backgroundImage: _profileImageBase64 != null
                           ? MemoryImage(base64Decode(_profileImageBase64!))
                           : null,
@@ -310,7 +314,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                       child: CircleAvatar(
                         radius: 16,
                         backgroundColor: Color(0xFF10B981),
-                        child: Icon(Icons.camera_alt, size: 16, color: Colors.black),
+                        child: Icon(Icons.camera_alt, size: 16, color: Colors.white),
                       ),
                     ),
                   ],
@@ -320,30 +324,34 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
             const SizedBox(height: 30),
             TextField(
               controller: _nameController,
+              style: const TextStyle(color: Colors.black),
               decoration: InputDecoration(
                 labelText: 'पूरा नाम',
                 filled: true,
-                fillColor: const Color(0xFF111827),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                fillColor: Colors.white,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.shade300)),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.shade300)),
               ),
             ),
             const SizedBox(height: 16),
             TextField(
               controller: _skillOrCompanyController,
+              style: const TextStyle(color: Colors.black),
               decoration: InputDecoration(
                 labelText: _isClient ? 'कंपनी का नाम / मकान विवरण' : 'आपका हुनर (जैसे: राजमिस्त्री, इलेक्ट्रीशियन)',
                 filled: true,
-                fillColor: const Color(0xFF111827),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                fillColor: Colors.white,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.shade300)),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.shade300)),
               ),
             ),
             const SizedBox(height: 24),
-            const Text('आप क्या हैं?', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+            const Text('आप क्या हैं?', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
             Row(
               children: [
                 Expanded(
                   child: RadioListTile<bool>(
-                    title: const Text('वर्कर', style: TextStyle(color: Colors.white)),
+                    title: const Text('वर्कर', style: TextStyle(color: Colors.black87)),
                     value: false,
                     groupValue: _isClient,
                     activeColor: const Color(0xFF10B981),
@@ -352,7 +360,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                 ),
                 Expanded(
                   child: RadioListTile<bool>(
-                    title: const Text('क्लाइंट', style: TextStyle(color: Colors.white)),
+                    title: const Text('क्लाइंट', style: TextStyle(color: Colors.black87)),
                     value: true,
                     groupValue: _isClient,
                     activeColor: const Color(0xFF10B981),
@@ -369,7 +377,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                 backgroundColor: const Color(0xFF10B981),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               ),
-              child: const Text('प्रोफाइल सेव करें और आगे बढ़ें', style: TextStyle(fontSize: 18, color: Colors.black, fontWeight: FontWeight.bold)),
+              child: const Text('प्रोफाइल सेव करें और आगे बढ़ें', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
             ),
           ],
         ),
@@ -379,7 +387,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
 }
 
 // ---------------------------------------------------------
-// 4. CLIENT DASHBOARD (With Job Posting & Directory Navigation)
+// 4. CLIENT DASHBOARD
 // ---------------------------------------------------------
 class ClientDashboard extends StatefulWidget {
   final String phone;
@@ -447,6 +455,7 @@ class _ClientDashboardState extends State<ClientDashboard> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF9FAFB),
       appBar: AppBar(
         title: const Text('क्लाइंट डैशबोर्ड (Viziawork)'),
         actions: [
@@ -466,13 +475,13 @@ class _ClientDashboardState extends State<ClientDashboard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // डायरेक्टरी और रजिस्ट्रेशन शॉर्टकट बैनर
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFF111827),
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFF10B981).withOpacity(0.4)),
+                border: Border.all(color: const Color(0xFF10B981).withOpacity(0.3)),
+                boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 10, spreadRadius: 2)],
               ),
               child: Column(
                 children: [
@@ -485,8 +494,8 @@ class _ClientDashboardState extends State<ClientDashboard> {
                     children: [
                       ElevatedButton.icon(
                         onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const WorkerDirectoryScreen())),
-                        icon: const Icon(Icons.list_alt, size: 18, color: Colors.black),
-                        label: const Text('डायरेक्टरी खोलें', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                        icon: const Icon(Icons.list_alt, size: 18, color: Colors.white),
+                        label: const Text('डायरेक्टरी खोलें', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                         style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981)),
                       ),
                       OutlinedButton.icon(
@@ -501,20 +510,20 @@ class _ClientDashboardState extends State<ClientDashboard> {
               ),
             ),
             const SizedBox(height: 24),
-            const Text('या नया काम पोस्ट करें:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+            const Text('या नया काम पोस्ट करें:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
             const SizedBox(height: 12),
-            TextField(controller: _titleController, decoration: InputDecoration(labelText: 'काम का नाम (जैसे: मिस्त्री, प्लंबर, इलेक्ट्रीशियन)', filled: true, fillColor: const Color(0xFF111827), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none))),
+            TextField(controller: _titleController, style: const TextStyle(color: Colors.black), decoration: InputDecoration(labelText: 'काम का नाम (जैसे: मिस्त्री, प्लंबर, इलेक्ट्रीशियन)', filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)), enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)))),
             const SizedBox(height: 12),
-            TextField(controller: _descController, decoration: InputDecoration(labelText: 'काम का पूरा विवरण', filled: true, fillColor: const Color(0xFF111827), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)), maxLines: 3),
+            TextField(controller: _descController, style: const TextStyle(color: Colors.black), decoration: InputDecoration(labelText: 'काम का पूरा विवरण', filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)), enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300))), maxLines: 3),
             const SizedBox(height: 12),
-            TextField(controller: _budgetController, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: 'बजट (₹)', filled: true, fillColor: const Color(0xFF111827), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none))),
+            TextField(controller: _budgetController, style: const TextStyle(color: Colors.black), keyboardType: TextInputType.number, decoration: InputDecoration(labelText: 'बजट (₹)', filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)), enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)))),
             const SizedBox(height: 12),
-            TextField(controller: _locationController, decoration: InputDecoration(labelText: 'लोकेशन / पूरा पता', filled: true, fillColor: const Color(0xFF111827), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none))),
+            TextField(controller: _locationController, style: const TextStyle(color: Colors.black), decoration: InputDecoration(labelText: 'लोकेशन / पूरा पता', filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)), enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)))),
             const SizedBox(height: 16),
             ElevatedButton.icon(
               onPressed: _pickImages,
-              icon: const Icon(Icons.photo_library, color: Colors.black),
-              label: const Text('काम की फोटो चुनें (Multiple)', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+              icon: const Icon(Icons.photo_library, color: Colors.white),
+              label: const Text('काम की फोटो चुनें (Multiple)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
               style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981)),
             ),
             const SizedBox(height: 12),
@@ -537,7 +546,7 @@ class _ClientDashboardState extends State<ClientDashboard> {
                             top: 2,
                             right: 2,
                             child: GestureDetector(
-                              onPressed: () => _removeImage(index),
+                              onTap: () => _removeImage(index), // यहाँ onTap कर दिया गया है (त्रुटि ठीक)
                               child: Container(
                                 decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
                                 child: const Icon(Icons.close, size: 18, color: Colors.redAccent),
@@ -554,7 +563,7 @@ class _ClientDashboardState extends State<ClientDashboard> {
             ElevatedButton(
               onPressed: _isLoading ? null : _postJob,
               style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16), backgroundColor: const Color(0xFF10B981)),
-              child: _isLoading ? const CircularProgressIndicator(color: Colors.black) : const Text('काम पब्लिश करें', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black)),
+              child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : const Text('काम पब्लिश करें', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
             ),
           ],
         ),
@@ -564,7 +573,7 @@ class _ClientDashboardState extends State<ClientDashboard> {
 }
 
 // ---------------------------------------------------------
-// 5. WORKER DASHBOARD (Placeholder for Worker)
+// 5. WORKER DASHBOARD
 // ---------------------------------------------------------
 class WorkerDashboard extends StatelessWidget {
   final String phone;
@@ -573,17 +582,18 @@ class WorkerDashboard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF9FAFB),
       appBar: AppBar(title: const Text('वर्कर डैशबोर्ड')),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text('वर्कर डैशबोर्ड में आपका स्वागत है!', style: TextStyle(fontSize: 18, color: Colors.white)),
+            const Text('वर्कर डैशबोर्ड में आपका स्वागत है!', style: TextStyle(fontSize: 18, color: Colors.black87)),
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const WorkerDirectoryScreen())),
               style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981)),
-              child: const Text('सभी कामगार डायरेक्टरी देखें', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+              child: const Text('सभी कामगार डायरेक्टरी देखें', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             ),
           ],
         ),
@@ -603,6 +613,7 @@ class ViewProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     DatabaseReference userRef = FirebaseDatabase.instance.ref().child('users').child(phone);
     return Scaffold(
+      backgroundColor: const Color(0xFFF9FAFB),
       appBar: AppBar(title: const Text('मेरी प्रोफाइल')),
       body: FutureBuilder(
         future: userRef.get(),
@@ -626,28 +637,28 @@ class ViewProfileScreen extends StatelessWidget {
                 Center(
                   child: CircleAvatar(
                     radius: 50,
-                    backgroundColor: const Color(0xFF1F2937),
+                    backgroundColor: Colors.grey.shade200,
                     backgroundImage: profileImg.isNotEmpty ? MemoryImage(base64Decode(profileImg)) : null,
                     child: profileImg.isEmpty ? const Icon(Icons.person, size: 50, color: Colors.grey) : null,
                   ),
                 ),
                 const SizedBox(height: 16),
-                Text(name, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
+                Text(name, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black)),
                 const SizedBox(height: 4),
                 Text(skill, style: const TextStyle(fontSize: 14, color: Color(0xFF10B981))),
                 const SizedBox(height: 20),
                 ListTile(
-                  tileColor: const Color(0xFF111827),
+                  tileColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   leading: const Icon(Icons.phone, color: Color(0xFF10B981)),
-                  title: Text('+91 $phone', style: const TextStyle(color: Colors.white)),
+                  title: Text('+91 $phone', style: const TextStyle(color: Colors.black87)),
                 ),
                 const SizedBox(height: 12),
                 ListTile(
-                  tileColor: const Color(0xFF111827),
+                  tileColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   leading: const Icon(Icons.account_balance_wallet, color: Color(0xFF10B981)),
-                  title: Text('वॉलेट कॉइन्स: $coins', style: const TextStyle(color: Colors.white)),
+                  title: Text('वॉलेट कॉइन्स: $coins', style: const TextStyle(color: Colors.black87)),
                 ),
               ],
             ),
@@ -673,7 +684,6 @@ class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
 
-  // आम जनता के इस्तेमाल की पूरी 200+ कैटेगरीज की लिस्ट
   final List<String> _categories = [
     'सभी', 'लेबर', 'राजमिस्त्री', 'ठेकेदार', 'इलेक्ट्रीशियन', 'प्लंबर', 'कार मैकेनिक', 'बाइक मैकेनिक', 
     'एसी रिपेयर', 'कूलर रिपेयर', 'फ्रिज रिपेयर', 'वाशिंग मशीन रिपेयर', 'एलईडी/टीवी रिपेयर', 'कंप्यूटर रिपेयर', 
@@ -717,6 +727,7 @@ class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF9FAFB),
       appBar: AppBar(
         title: const Text('200+ कामगार और एक्सपर्ट डायरेक्टरी', style: TextStyle(fontSize: 16)),
         actions: [
@@ -738,7 +749,7 @@ class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
                   _searchQuery = val.toLowerCase().trim();
                 });
               },
-              style: const TextStyle(color: Colors.white),
+              style: const TextStyle(color: Colors.black),
               decoration: InputDecoration(
                 hintText: 'नाम या हुनर से खोजें (जैसे: मिस्त्री, एसी, ड्राइवर)...',
                 hintStyle: const TextStyle(color: Colors.grey, fontSize: 14),
@@ -755,15 +766,16 @@ class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
                       )
                     : null,
                 filled: true,
-                fillColor: const Color(0xFF111827),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                fillColor: Colors.white,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.shade300)),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.shade300)),
               ),
             ),
           ),
           Container(
             height: 60,
             padding: const EdgeInsets.symmetric(vertical: 6),
-            color: const Color(0xFF111827),
+            color: Colors.white,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               itemCount: _categories.length,
@@ -777,9 +789,9 @@ class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
                     label: Text(cat),
                     selected: isSelected,
                     selectedColor: const Color(0xFF10B981),
-                    backgroundColor: const Color(0xFF1F2937),
+                    backgroundColor: Colors.grey.shade100,
                     labelStyle: TextStyle(
-                      color: isSelected ? Colors.black : Colors.white,
+                      color: isSelected ? Colors.white : Colors.black87,
                       fontWeight: FontWeight.bold,
                       fontSize: 13,
                     ),
@@ -793,7 +805,7 @@ class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
               },
             ),
           ),
-          const Divider(color: Color(0xFF1F2937), height: 1),
+          const Divider(color: Colors.grey, height: 1),
           Expanded(
             child: FirebaseAnimatedList(
               query: _workersRef,
@@ -821,15 +833,16 @@ class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
                   margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF111827),
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFF10B981).withOpacity(0.3)),
+                    border: Border.all(color: Colors.grey.shade200),
+                    boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.08), blurRadius: 8, spreadRadius: 2)],
                   ),
                   child: Row(
                     children: [
                       CircleAvatar(
                         radius: 28,
-                        backgroundColor: const Color(0xFF1F2937),
+                        backgroundColor: Colors.grey.shade200,
                         backgroundImage: profileImg.isNotEmpty ? MemoryImage(base64Decode(profileImg)) : null,
                         child: profileImg.isEmpty ? const Icon(Icons.person, size: 28, color: Colors.grey) : null,
                       ),
@@ -838,11 +851,11 @@ class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                            Text(name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
                             const SizedBox(height: 4),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                              decoration: BoxDecoration(color: const Color(0xFF1F2937), borderRadius: BorderRadius.circular(6)),
+                              decoration: BoxDecoration(color: const Color(0xFF10B981).withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
                               child: Text(skill, style: const TextStyle(color: Color(0xFF10B981), fontSize: 12, fontWeight: FontWeight.w600)),
                             ),
                             const SizedBox(height: 6),
@@ -861,7 +874,7 @@ class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
                         icon: const CircleAvatar(
                           radius: 22,
                           backgroundColor: Color(0xFF10B981),
-                          child: Icon(Icons.call, color: Colors.black, size: 20),
+                          child: Icon(Icons.call, color: Colors.white, size: 20),
                         ),
                       ),
                     ],
@@ -960,6 +973,7 @@ class _RegisterWorkerScreenState extends State<RegisterWorkerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF9FAFB),
       appBar: AppBar(title: const Text('अपनी सर्विस रजिस्टर करें')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -971,7 +985,7 @@ class _RegisterWorkerScreenState extends State<RegisterWorkerScreen> {
                 onTap: _pickImage,
                 child: CircleAvatar(
                   radius: 50,
-                  backgroundColor: const Color(0xFF1F2937),
+                  backgroundColor: Colors.grey.shade200,
                   backgroundImage: _profileImageBytes != null ? MemoryImage(_profileImageBytes!) : null,
                   child: _profileImageBytes == null
                       ? const Column(
@@ -988,20 +1002,20 @@ class _RegisterWorkerScreenState extends State<RegisterWorkerScreen> {
               const SizedBox(height: 20),
               TextFormField(
                 controller: _nameController,
-                style: const TextStyle(color: Colors.white),
+                style: const TextStyle(color: Colors.black),
                 decoration: _inputDecoration('पूरा नाम (Name)', Icons.person),
                 validator: (val) => val!.isEmpty ? 'कृपया नाम दर्ज करें' : null,
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 value: _selectedCategory,
-                dropdownColor: const Color(0xFF111827),
-                style: const TextStyle(color: Colors.white, fontSize: 16),
+                dropdownColor: Colors.white,
+                style: const TextStyle(color: Colors.black, fontSize: 16),
                 decoration: _inputDecoration('अपना हुनर / कैटेगरी चुनें', Icons.work),
                 items: _categories.map((cat) {
                   return DropdownMenuItem(
                     value: cat,
-                    child: Text(cat),
+                    child: Text(cat, style: const TextStyle(color: Colors.black)),
                   );
                 }).toList(),
                 onChanged: (val) {
@@ -1014,14 +1028,14 @@ class _RegisterWorkerScreenState extends State<RegisterWorkerScreen> {
               TextFormField(
                 controller: _phoneController,
                 keyboardType: TextInputType.phone,
-                style: const TextStyle(color: Colors.white),
+                style: const TextStyle(color: Colors.black),
                 decoration: _inputDecoration('मोबाइल नंबर (Phone Number)', Icons.phone),
                 validator: (val) => val!.length < 10 ? 'सही मोबाइल नंबर दर्ज करें' : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _chargeController,
-                style: const TextStyle(color: Colors.white),
+                style: const TextStyle(color: Colors.black),
                 decoration: _inputDecoration('दैनिक चार्ज या विजिटिंग फीस (जैसे: 500 / दिन)', Icons.currency_rupee),
                 validator: (val) => val!.isEmpty ? 'कृपया चार्ज दर्ज करें' : null,
               ),
@@ -1029,7 +1043,7 @@ class _RegisterWorkerScreenState extends State<RegisterWorkerScreen> {
               TextFormField(
                 controller: _addressController,
                 maxLines: 2,
-                style: const TextStyle(color: Colors.white),
+                style: const TextStyle(color: Colors.black),
                 decoration: _inputDecoration('पूरा पता / इलाका (Address / Location)', Icons.location_on),
                 validator: (val) => val!.isEmpty ? 'कृपया पता दर्ज करें' : null,
               ),
@@ -1044,10 +1058,10 @@ class _RegisterWorkerScreenState extends State<RegisterWorkerScreen> {
                   ),
                   onPressed: _isLoading ? null : _submitProfile,
                   child: _isLoading
-                      ? const CircularProgressIndicator(color: Colors.black)
+                      ? const CircularProgressIndicator(color: Colors.white)
                       : const Text(
                           'डैशबोर्ड पर जोड़ें (Register)',
-                          style: TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.bold),
+                          style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                         ),
                 ),
               ),
@@ -1064,8 +1078,15 @@ class _RegisterWorkerScreenState extends State<RegisterWorkerScreen> {
       labelStyle: const TextStyle(color: Colors.grey),
       prefixIcon: Icon(icon, color: const Color(0xFF10B981)),
       filled: true,
-      fillColor: const Color(0xFF111827),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+      fillColor: Colors.white,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: Colors.grey.shade300),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: Colors.grey.shade300),
+      ),
     );
   }
 }
