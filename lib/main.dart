@@ -404,7 +404,6 @@ class _ClientDashboardState extends State<ClientDashboard> {
     final pickedFiles = await picker.pickMultiImage(imageQuality: 50);
     if (pickedFiles.isNotEmpty) {
       for (var file in pickedFiles) {
-        // यहाँ से आप 5 या उससे अधिक फोटो जोड़ सकते हैं
         File imgFile = File(file.path);
         List<int> imageBytes = await imgFile.readAsBytes();
         _selectedImagesBase64.add(base64Encode(imageBytes));
@@ -615,7 +614,6 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
     int updatedCoins = _userCoins - 10;
     await FirebaseDatabase.instance.ref().child('users').child(widget.phone).update({'walletCoins': updatedCoins});
 
-    // Show full details dialog with direct call button
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -753,7 +751,7 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
                           : Container(),
                       const SizedBox(height: 12),
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.between,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween, // <-- यहाँ ठीक कर दिया गया है
                         children: [
                           Text('बजट: ₹$budget', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF10B981))),
                           const Text('लोकेशन: [🪙 10 देकर खोलें]', style: TextStyle(fontSize: 12, color: Colors.redAccent)),
