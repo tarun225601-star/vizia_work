@@ -102,7 +102,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 8),
               const Text(
-                '500+ रोजमर्रा के काम और डायरेक्ट कारीगर कॉल',
+                'खुला बाज़ार - डायरेक्ट कारीगर से बात करें',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 15, color: Colors.grey, fontWeight: FontWeight.w500),
               ),
@@ -240,7 +240,7 @@ class RoleSelectionScreen extends StatelessWidget {
             _buildRoleCard(
               context,
               title: 'मुझे काम कराना है / मिस्त्री ढूंढना है',
-              subtitle: '500+ कामों की लिस्ट में से सर्च करें और सीधा कॉल करें',
+              subtitle: 'कुछ भी सर्च करें (जैसे: मिस्त्री, टंकी साफ) और सीधा कॉल करें',
               icon: Icons.search_rounded,
               onTap: () {
                 Navigator.push(
@@ -253,8 +253,8 @@ class RoleSelectionScreen extends StatelessWidget {
 
             _buildRoleCard(
               context,
-              title: 'मैं कारीगर / मिस्त्री हूँ (प्रोफाइल बनाएं)',
-              subtitle: 'अपनी दुकान या 500+ में से अपना हुनर रजिस्टर करें',
+              title: 'मैं कारीगर हूँ (अपनी प्रोफाइल बनाएं)',
+              subtitle: 'अपना हुनर खुद टाइप करें ताकि लोग आपको सीधा फोन कर सकें',
               icon: Icons.engineering_rounded,
               onTap: () {
                 Navigator.push(
@@ -310,7 +310,7 @@ class RoleSelectionScreen extends StatelessWidget {
 }
 
 // ---------------------------------------------------------
-// 4. WORKER DIRECTORY & SEARCH SCREEN (500+ Categories List)
+// 4. WORKER DIRECTORY & SEARCH SCREEN (बिना किसी फिक्स कैटेगरी के, सीधा सर्च)
 // ---------------------------------------------------------
 class WorkerDirectoryScreen extends StatefulWidget {
   const WorkerDirectoryScreen({super.key});
@@ -320,60 +320,21 @@ class WorkerDirectoryScreen extends StatefulWidget {
 }
 
 class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
-  String _selectedCategory = 'सभी';
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
-
-  // 500+ रोजमर्रा के काम और हुनर की कम्पलीट लिस्ट
-  final List<String> _categories = [
-    'सभी', 'फुल नंबर / प्लंबर', 'टंकी सफाई', 'इलेक्ट्रीशियन', 'राजमिस्त्री', 'लेबर', 'कारपेंटर (बढ़ई)', 
-    'पेंटर', 'एसी रिपेयर', 'फ्रिज रिपेयर', 'वाशिंग मशीन रिपेयर', 'सफाई कर्मी', 'वेल्डर', 'कार मैकेनिक', 
-    'बाइक मैकेनिक', 'ड्राइवर', 'कीटनाशक (Pest Control)', 'आरओ वाटर प्यूरीफायर रिपेयर', 'गीजर रिपेयर', 
-    'माइक्रोवेव रिपेयर', 'पंखा (Fan) रिपेयर', 'इन्टेरियर डिज़ाइनर', 'फॉल सीलिंग मिस्त्री', 'एल्युमिनियम/कांच वाला', 
-    'शटर और गेट रिपेयर', 'टेंट हाउस वाला', 'डीजे और साउंड सिस्टम', 'हलवाई', 'वाहन धोने वाला (Car Washer)', 
-    'गार्डन/लॉन केयर वाला', 'टेलर (दर्जी)', 'प्रेस/धोबी वाला', 'कचरा/मलबा उठाने वाला', 'पैकिंग और शिफ्टिंग', 
-    'डिलीवरी बॉय', 'ऑटो चालक', 'टैक्सी चालक', 'स्कूल वैन चालक', 'लोडर ऑटो चालक', 'ट्रैक्टर ड्राइवर', 
-    'बोरवेल मोटर रिपेयर', 'सबमर्सिबल पंप वाला', 'स्टेबलाइजर रिपेयर', 'इन्वर्टर बैटरी चार्जिंग', 'डीप फ्रीजर रिपेयर', 
-    'वाटर कूलर रिपेयर', 'गीजर इंस्टॉलेशन', 'चिमनी रिपेयर', 'गैस चूल्हा रिपेयर', 'आरओ फिल्टर चेंज', 
-    'सोफा ड्राई क्लीनिंग', 'कार ड्राई क्लीनिंग', 'वाटर टैंक सफाई', 'सेप्टिक टैंक सफाई', 'दीमक नियंत्रण (Termite)', 
-    'मच्छर फॉगिंग वाला', 'जूता चप्पल रिपेयर', 'चाबी बनाने वाला (Locksmith)', 'लोहे की ग्रिल पेंट', 'घर की रंगाई-पुताई', 
-    'वाटरप्रूफिंग वाला', 'छत की मरम्मत', 'पत्थर कटाई मिस्त्री', 'फर्नीचर पॉलिश वाला', 'गद्दे रजाई बनाने वाला', 
-    'कंबल धुलाई वाला', 'पर्दे लगाने वाला', 'ब्लाइंड्स इंस्टॉलर', 'मच्छर जाली (Mosquito Net)', 'ग्लास फिल्म वाला', 
-    'वॉलपेपर लगाने वाला', 'जिप्सम बोर्ड वाला', 'पीवीसी पैनल वाला', 'लकड़ी का ठेकेदार', 'लोहे का ठेकेदार', 
-    'सड़क निर्माण लेबर', 'खुदाई वाली लेबर', 'भार उठाने वाले हम्माल', 'ईंट भट्ठा लेबर', 'कंक्रीट मिक्सर ऑपरेटर', 
-    'वाइब्रेटर मशीन वाला', 'शटरिंग प्लेट वाला', 'स्केफोल्डिंग (बली-फट्टा)', 'स्टील बाइंडिंग मिस्त्री', 'ट्यूबवेल मिस्त्री', 
-    'सोलर इन्वर्टर वाला', 'वाटर हीटर रिपेयर', 'इंडक्शन चूल्हा रिपेयर', 'कॉफी मशीन रिपेयर', 'प्रेस मशीन वाला', 
-    'जिम इंस्ट्रक्टर', 'योग टीचर', 'होम ट्यूटर (पढ़ाने वाला)', 'म्यूजिक टीचर', 'डांस टीचर', 'नर्स / कम्पाउंडर', 
-    'एल्डरली केयरटेकर (बुजुर्गों की सेवा)', 'बेबी सिटर / नैनी', 'ड्राइवर (पर्सनल)', 'कुक (घर का खाना बनाने वाला)', 
-    'माली (पौधों की देखभाल)', 'कार क्लीनर (रोज सुबह धोने वाला)', 'वॉचमैन / चौकीदार', 'इवेंट फोटोग्राफर', 
-    'वीडियोग्राफर', 'ड्रोन ऑपरेटर', 'लाइटिंग डेकोरेशन वाला', 'फूलों की सजावट वाला', 'बर्थडे प्लानर', 
-    'मैरिज गार्डन वर्कर', 'कैटरिंग वेटर', 'डिस्पोजेबल बर्तन सप्लायर', 'आइटम सप्लाई वाला', 'दूध वाला (Milk Man)', 
-    'अखबार वाला', 'गैस सिलेंडर डिलीवरी मैन', 'आरओ वाटर केन सप्लायर', 'बिल्डिंग मटीरियल सप्लायर', 'रेत-बजरी सप्लायर', 
-    'ईंट सप्लायर', 'सीमेंट सप्लायर', 'सरिया (Steel) सप्लायर', 'लकड़ी सप्लायर', 'पत्थर/ग्रेनाइट सप्लायर', 
-    'टेंट सप्लायर', 'साउंड सप्लायर', 'जनरेटर रेंटल वाला', 'जैसीबी रेंटल वाला', 'डंपर/ट्रक ऑपरेटर', 
-    'मिनी ट्रक (छोटा हाथी) चालक', 'पिकअप चालक', 'ट्रेलर चालक', 'क्रेन रेंटल वाला', 'स्कैफोल्डिंग रेंटल', 
-    'शटरिंग मटीरियल रेंटल', 'मिक्सर मशीन रेंटल', 'वेल्डिंग मशीन रेंटल', 'कटर मशीन रेंटल', 'ब्रेकर मशीन रेंटल', 
-    'वाटर पंप रेंटल', 'फॉगिंग मशीन रेंटल', 'स्टेचर/व्हीलचेयर सप्लायर', 'ऑक्सीजन सिलेंडर सप्लायर', 'हॉस्पिटल बेड सप्लायर', 
-    'प्राथमिक उपचार वाला', 'वैद्य / हकीम', 'मालिश करने वाला (मसाज मैन)', 'नाई / हेयर सैलून वाला', 'लेडीज ब्यूटीशियन', 
-    'मेहंदी आर्टिस्ट', 'मेकअप आर्टिस्ट', 'कपड़े धोने वाली बाई', 'बर्तन साफ करने वाली बाई', 'घर की फुल सफाई वाली बाई', 
-    'चौकीदार (नाइट शिफ्ट)', 'डॉग ट्रेनर', 'पेट्स ग्रूमर (पालतू जानवर)', 'एक्वेरियम क्लीनर', 'पौधे लगाने वाला', 
-    'किचन गार्डन वाला', 'वर्मीकंपोस्ट खाद वाला', 'गोबर खाद सप्लायर', 'मिट्टी सप्लायर', 'गमले सप्लायर',
-    // ... (और इसी प्रकार रोजमर्रा के अन्य 350+ हुनर और कैटेगरीज इसके अंदर जोड़े गए हैं)
-  ];
-
   final DatabaseReference _workersRef = FirebaseDatabase.instance.ref().child('public_workers');
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('500+ काम और कारीगर खोजें', style: TextStyle(fontSize: 16)),
+        title: const Text('कारीगर खोजें और बात करें', style: TextStyle(fontSize: 16)),
       ),
       body: Column(
         children: [
-          // सर्च बार - तुरंत फिल्टर करेगा
+          // पावरफुल सर्च बार - जो भी टाइप करोगे, उससे जुड़े सारे वर्कर तुरंत सामने आ जाएंगे
           Padding(
-            padding: const EdgeInsets.all(12.0),
+            padding: const EdgeInsets.all(16.0),
             child: TextField(
               controller: _searchController,
               onChanged: (val) {
@@ -381,10 +342,10 @@ class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
                   _searchQuery = val.toLowerCase().trim();
                 });
               },
-              style: const TextStyle(color: Colors.black),
+              style: const TextStyle(color: Colors.black, fontSize: 16),
               decoration: InputDecoration(
-                hintText: 'लिखें क्या चाहिए (जैसे: फुल नंबर, टंकी साफ, इलेक्ट्रीशियन)...',
-                hintStyle: const TextStyle(color: Colors.grey, fontSize: 13),
+                hintText: 'यहाँ लिखें क्या चाहिए (जैसे: मिस्त्री, टंकी साफ, प्लंबर)...',
+                hintStyle: const TextStyle(color: Colors.grey, fontSize: 14),
                 prefixIcon: const Icon(Icons.search, color: Color(0xFF10B981)),
                 suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(
@@ -404,42 +365,8 @@ class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
               ),
             ),
           ),
-          // 500+ कैटेगरी की स्क्रॉलिंग लिस्ट
-          Container(
-            height: 60,
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            color: Colors.white,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: _categories.length,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              itemBuilder: (context, index) {
-                String cat = _categories[index];
-                bool isSelected = _selectedCategory == cat;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8.0),
-                  child: ChoiceChip(
-                    label: Text(cat),
-                    selected: isSelected,
-                    selectedColor: const Color(0xFF10B981),
-                    backgroundColor: Colors.grey.shade100,
-                    labelStyle: TextStyle(
-                      color: isSelected ? Colors.white : Colors.black87,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                    ),
-                    onSelected: (bool selected) {
-                      setState(() {
-                        _selectedCategory = cat;
-                      });
-                    },
-                  ),
-                );
-              },
-            ),
-          ),
           const Divider(color: Colors.grey, height: 1),
-          // कारीगरों की लिस्ट (सर्च और कैटेगरी के हिसाब से फिल्टर होकर दिखेगी)
+          // लाइव वर्कर्स लिस्ट (फिल्टर होकर दिखेगी)
           Expanded(
             child: FirebaseAnimatedList(
               query: _workersRef,
@@ -452,14 +379,12 @@ class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
                 String address = workerData['address'] ?? '';
                 String profileImg = workerData['profileImage'] ?? '';
 
-                bool matchesCategory = _selectedCategory == 'सभी' || 
-                    skill.toLowerCase().contains(_selectedCategory.toLowerCase());
-
+                // सर्च के आधार पर नाम या हुनर मैच करना
                 bool matchesSearch = _searchQuery.isEmpty || 
                     name.toLowerCase().contains(_searchQuery) || 
                     skill.toLowerCase().contains(_searchQuery);
 
-                if (!matchesCategory || !matchesSearch) {
+                if (!matchesSearch) {
                   return Container();
                 }
 
@@ -547,7 +472,7 @@ class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
 }
 
 // ---------------------------------------------------------
-// 5. REGISTER WORKER SCREEN
+// 5. REGISTER WORKER SCREEN (खुद हाथ से हुनर टाइप करने की सुविधा)
 // ---------------------------------------------------------
 class RegisterWorkerScreen extends StatefulWidget {
   const RegisterWorkerScreen({super.key});
@@ -559,47 +484,12 @@ class RegisterWorkerScreen extends StatefulWidget {
 class _RegisterWorkerScreenState extends State<RegisterWorkerScreen> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _skillController = TextEditingController(); // हाथ से हुनर लिखने के लिए
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
 
-  String _selectedCategory = 'फुल नंबर / प्लंबर';
   Uint8List? _profileImageBytes;
   bool _isLoading = false;
-
-  final List<String> _categories = [
-    'फुल नंबर / प्लंबर', 'टंकी सफाई', 'इलेक्ट्रीशियन', 'राजमिस्त्री', 'लेबर', 'कारपेंटर (बढ़ई)', 
-    'पेंटर', 'एसी रिपेयर', 'फ्रिज रिपेयर', 'वाशिंग मशीन रिपेयर', 'सफाई कर्मी', 'वेल्डर', 'कार मैकेनिक', 
-    'बाइक मैकेनिक', 'ड्राइवर', 'कीटनाशक (Pest Control)', 'आरओ वाटर प्यूरीफायर रिपेयर', 'गीजर रिपेयर', 
-    'माइक्रोवेव रिपेयर', 'पंखा (Fan) रिपेयर', 'इन्टेरियर डिज़ाइनर', 'फॉल सीलिंग मिस्त्री', 'एल्युमिनियम/कांच वाला', 
-    'शटर और गेट रिपेयर', 'टेंट हाउस वाला', 'डीजे और साउंड सिस्टम', 'हलवाई', 'वाहन धोने वाला (Car Washer)', 
-    'गार्डन/लॉन केयर वाला', 'टेलर (दर्जी)', 'प्रेस/धोबी वाला', 'कचरा/मलबा उठाने वाला', 'पैकिंग और शिफ्टिंग', 
-    'डिलीवरी बॉय', 'ऑटो चालक', 'टैक्सी चालक', 'स्कूल वैन चालक', 'लोडर ऑटो चालक', 'ट्रैक्टर ड्राइवर', 
-    'बोरवेल मोटर रिपेयर', 'सबमर्सिबल पंप वाला', 'स्टेबलाइजर रिपेयर', 'इन्वर्टर बैटरी चार्जिंग', 'डीप फ्रीजर रिपेयर', 
-    'वाटर कूलर रिपेयर', 'गीजर इंस्टॉलेशन', 'चिमनी रिपेयर', 'गैस चूल्हा रिपेयर', 'आरओ फिल्टर चेंज', 
-    'सोफा ड्राई क्लीनिंग', 'कार ड्राई क्लीनिंग', 'वाटर टैंक सफाई', 'सेप्टिक टैंक सफाई', 'दीमक नियंत्रण (Termite)', 
-    'मच्छर फॉगिंग वाला', 'जूता चप्पल रिपेयर', 'चाबी बनाने वाला (Locksmith)', 'लोहे की ग्रिल पेंट', 'घर की रंगाई-पुताई', 
-    'वाटरप्रूफिंग वाला', 'छत की मरम्मत', 'पत्थर कटाई मिस्त्री', 'फर्नीचर पॉलिश वाला', 'गद्दे रजाई बनाने वाला', 
-    'कंबल धुलाई वाला', 'पर्दे लगाने वाला', 'ब्लाइंड्स इंस्टॉलर', 'मच्छर जाली (Mosquito Net)', 'ग्लास फिल्म वाला', 
-    'वॉलपेपर लगाने वाला', 'जिप्सम बोर्ड वाला', 'पीवीसी पैनल वाला', 'लकड़ी का ठेकेदार', 'लोहे का ठेकेदार', 
-    'सड़क निर्माण लेबर', 'खुदाई वाली लेबर', 'भार उठाने वाले हम्माल', 'ईंट भट्ठा लेबर', 'कंक्रीट मिक्सर ऑपरेटर', 
-    'वाइब्रेटर मशीन वाला', 'शटरिंग प्लेट वाला', 'स्केफोल्डिंग (बली-फट्टा)', 'स्टील बाइंडिंग मिस्त्री', 'ट्यूबवेल मिस्त्री', 
-    'सोलर इन्वर्टर वाला', 'वाटर हीटर रिपेयर', 'इंडक्शन चूल्हा रिपेयर', 'कॉफी मशीन रिपेयर', 'प्रेस मशीन वाला', 
-    'जिम इंस्ट्रक्टर', 'योग टीचर', 'होम ट्यूटर (पढ़ाने वाला)', 'म्यूजिक टीचर', 'डांस टीचर', 'नर्स / कम्पाउंडर', 
-    'एल्डरली केयरटेकर (बुजुर्गों की सेवा)', 'बेबी सिटर / नैनी', 'ड्राइवर (पर्सनल)', 'कुक (घर का खाना बनाने वाला)', 
-    'माली (पौधों की देखभाल)', 'कार क्लीनर (रोज सुबह धोने वाला)', 'वॉचमैन / चौकीदार', 'इवेंट फोटोग्राफर', 
-    'वीडियोग्राफर', 'ड्रोन ऑपरेटर', 'लाइटिंग डेकोरेशन वाला', 'फूलों की सजावट वाला', 'बर्थडे प्लानर', 
-    'मैरिज गार्डन वर्कर', 'कैटरिंग वेटर', 'डिस्पोजेबल बर्तन सप्लायर', 'आइटम सप्लाई वाला', 'दूध वाला (Milk Man)', 
-    'अखबार वाला', 'गैस सिलेंडर डिलीवरी मैन', 'आरओ वाटर केन सप्लायर', 'बिल्डिंग मटीरियल सप्लायर', 'रेत-बजरी सप्लायर', 
-    'ईंट सप्लायर', 'सीमेंट सप्लायर', 'सरिया (Steel) सप्लायर', 'लकड़ी सप्लायर', 'पत्थर/ग्रेनाइट सप्लायर', 
-    'टेंट सप्लायर', 'साउंड सप्लायर', 'जनरेटर रेंटल वाला', 'जैसीबी रेंटल वाला', 'डंपर/ट्रक ऑपरेटर', 
-    'मिनी ट्रक (छोटा हाथी) चालक', 'पिकअप चालक', 'ट्रेलर चालक', 'क्रेन रेंटल वाला', 'स्कैफोल्डिंग रेंटल', 
-    'शटरिंग मटीरियल रेंटल', 'मिक्सर मशीन रेंटल', 'वेल्डिंग मशीन रेंटल', 'कटर मशीन रेंटल', 'ब्रेकर मशीन रेंटल', 
-    'वाटर पंप रेंटल', 'फॉगिंग मशीन रेंटल', 'स्टेचर/व्हीलचेयर सप्लायर', 'ऑक्सीजन सिलेंडर सप्लायर', 'हॉस्पिटल बेड सप्लायर', 
-    'प्राथमिक उपचार वाला', 'वैद्य / हकीम', 'मालिश करने वाला (मसाज मैन)', 'नाई / हेयर सैलून वाला', 'लेडीज ब्यूटीशियन', 
-    'मेहंदी आर्टिस्ट', 'मेकअप आर्टिस्ट', 'कपड़े धोने वाली बाई', 'बर्तन साफ करने वाली बाई', 'घर की फुल सफाई वाली बाई', 
-    'चौकीदार (नाइट शिफ्ट)', 'डॉग ट्रेनर', 'पेट्स ग्रूमर (पालतू जानवर)', 'एक्वेरियम क्लीनर', 'पौधे लगाने वाला', 
-    'किचन गार्डन वाला', 'वर्मीकंपोस्ट खाद वाला', 'गोबर खाद सप्लायर', 'मिट्टी सप्लायर', 'गमले सप्लायर'
-  ];
 
   Future<void> _pickImage() async {
     final ImagePicker picker = ImagePicker();
@@ -625,7 +515,7 @@ class _RegisterWorkerScreenState extends State<RegisterWorkerScreen> {
         await ref.set({
           'id': ref.key,
           'name': _nameController.text.trim(),
-          'skill': _selectedCategory,
+          'skill': _skillController.text.trim(), // जो वर्कर टाइप करेगा, वही सेव होगा
           'phone': _phoneController.text.trim(),
           'address': _addressController.text.trim(),
           'profileImage': base64Image,
@@ -684,23 +574,12 @@ class _RegisterWorkerScreenState extends State<RegisterWorkerScreen> {
                 validator: (val) => val!.isEmpty ? 'कृपया नाम दर्ज करें' : null,
               ),
               const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                value: _selectedCategory,
-                dropdownColor: Colors.white,
-                isExpanded: true,
-                style: const TextStyle(color: Colors.black, fontSize: 16),
-                decoration: _inputDecoration('अपना हुनर चुनें (500+ लिस्ट)', Icons.work),
-                items: _categories.map((cat) {
-                  return DropdownMenuItem(
-                    value: cat,
-                    child: Text(cat, style: const TextStyle(color: Colors.black)),
-                  );
-                }).toList(),
-                onChanged: (val) {
-                  setState(() {
-                    _selectedCategory = val!;
-                  });
-                },
+              // ड्रॉपडाउन हटाकर यहाँ सिंपल टेक्स्ट बॉक्स दिया है ताकि कोई भी बंदा अपनी मर्जी से कुछ भी हुनर लिख सके
+              TextFormField(
+                controller: _skillController,
+                style: const TextStyle(color: Colors.black),
+                decoration: _inputDecoration('आप क्या काम जानते हैं? (जैसे: मिस्त्री, टंकी साफ, वेल्डर)', Icons.work),
+                validator: (val) => val!.isEmpty ? 'कृपया अपना हुनर/काम दर्ज करें' : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
