@@ -322,7 +322,8 @@ class WorkerDirectoryScreen extends StatefulWidget {
 class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
-  final DatabaseReference _workersRef = FirebaseDatabase.instance.ref().child('public_workers');
+  final Query _workersRef = FirebaseDatabase.instance.ref().child('public_workers').limitToFirst(15);
+
 
   @override
   Widget build(BuildContext context) {
