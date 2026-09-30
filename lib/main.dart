@@ -31,7 +31,7 @@ class ViziaworkApp extends StatelessWidget {
       title: 'Viziawork',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        brightness: Brightness.light, // वाइट थीम
+        brightness: Brightness.light,
         scaffoldBackgroundColor: const Color(0xFFF9FAFB),
         primaryColor: const Color(0xFF10B981),
         fontFamily: 'Roboto',
@@ -167,22 +167,11 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
       return;
     }
 
-    DatabaseReference userRef = FirebaseDatabase.instance.ref().child('users').child(widget.phone);
-    userRef.get().then((snapshot) {
-      if (snapshot.exists) {
-        Map<dynamic, dynamic> userData = snapshot.value as Map<dynamic, dynamic>;
-        bool isClient = userData['isClient'] ?? false;
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => isClient ? ClientDashboard(phone: widget.phone) : WorkerDashboard(phone: widget.phone)),
-        );
-      } else {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => ProfileSetupScreen(phone: widget.phone)),
-        );
-      }
-    });
+    // OTP के बाद सीधा 'Role Selection Screen' पर भेजें ताकि यूजर खुद चुन सके कि उसे क्या करना है
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => RoleSelectionScreen(phone: widget.phone)),
+    );
   }
 
   @override
@@ -229,157 +218,116 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
 }
 
 // ---------------------------------------------------------
-// 3. PROFILE SETUP SCREEN
+// 3. ROLE SELECTION SCREEN (ऐप खुलते ही विकल्प चुनने वाला पेज)
 // ---------------------------------------------------------
-class ProfileSetupScreen extends StatefulWidget {
+class RoleSelectionScreen extends StatelessWidget {
   final String phone;
-  const ProfileSetupScreen({super.key, required this.phone});
-
-  @override
-  State<ProfileSetupScreen> createState() => _ProfileSetupScreenState();
-}
-
-class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _skillOrCompanyController = TextEditingController();
-  bool _isClient = false;
-  String? _profileImageBase64;
-
-  Future<void> _pickProfileImage() async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery, imageQuality: 40);
-    if (pickedFile != null) {
-      File imgFile = File(pickedFile.path);
-      List<int> imageBytes = await imgFile.readAsBytes();
-      setState(() {
-        _profileImageBase64 = base64Encode(imageBytes);
-      });
-    }
-  }
-
-  void _saveProfile() async {
-    if (_nameController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('कृपया अपना नाम दर्ज करें')));
-      return;
-    }
-
-    DatabaseReference userRef = FirebaseDatabase.instance.ref().child('users').child(widget.phone);
-    await userRef.set({
-      'phone': widget.phone,
-      'name': _nameController.text.trim(),
-      'skillOrCompany': _skillOrCompanyController.text.trim(),
-      'isClient': _isClient,
-      'profileImage': _profileImageBase64 ?? '',
-      'rating': 5.0,
-      'totalReviews': 0,
-      'walletCoins': 100,
-    });
-
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => _isClient ? ClientDashboard(phone: widget.phone) : WorkerDashboard(phone: widget.phone)),
-    );
-  }
+  const RoleSelectionScreen({super.key, required this.phone});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
-      appBar: AppBar(title: const Text('अपनी प्रोफाइल बनाएं')),
-      body: SingleChildScrollView(
+      appBar: AppBar(
+        title: const Text('आप क्या करना चाहते हैं?'),
+        automaticallyImplyLeading: false,
+      ),
+      body: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text('Viziawork में आपका स्वागत है!\nअपनी सही जानकारी भरें और प्रोफाइल फोटो लगाएं।', style: TextStyle(fontSize: 15, color: Colors.grey)),
-            const SizedBox(height: 20),
-            Center(
-              child: GestureDetector(
-                onTap: _pickProfileImage,
-                child: Stack(
+            const Text(
+              'अपनी जरूरत के अनुसार विकल्प चुनें:',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
+            ),
+            const SizedBox(height: 30),
+            
+            // Option 1: काम कराना है (Client Dashboard)
+            _buildRoleCard(
+              context,
+              title: 'मुझे काम कराना है',
+              subtitle: 'यहाँ से आप अपना काम या प्रोजेक्ट पोस्ट कर सकते हैं',
+              icon: Icons.post_add,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => ClientDashboard(phone: phone)),
+                );
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // Option 2: काम ढूंढना है / कॉल करना है (Worker Directory / Calling)
+            _buildRoleCard(
+              context,
+              title: 'मुझे काम ढूंढना है / कॉल करना है',
+              subtitle: '200+ कामगारों और एक्सपर्ट्स की डायरेक्टरी देखें और सीधा कॉल करें',
+              icon: Icons.phone_in_talk,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const WorkerDirectoryScreen()),
+                );
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // Option 3: मैं काम करने वाला हूँ (Worker Service Registration)
+            _buildRoleCard(
+              context,
+              title: 'मैं काम करने वाला हूँ (रजिस्टर करें)',
+              subtitle: 'अपनी दुकान या हुनर को डायरेक्टरी में जोड़ें ताकि लोग आपको कॉल कर सकें',
+              icon: Icons.engineering,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const RegisterWorkerScreen()),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRoleCard(BuildContext context, {required String title, required String subtitle, required IconData icon, required VoidCallback onTap}) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(20),
+      elevation: 1,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF10B981).withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: const Color(0xFF10B981), size: 28),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    CircleAvatar(
-                      radius: 50,
-                      backgroundColor: Colors.grey.shade200,
-                      backgroundImage: _profileImageBase64 != null
-                          ? MemoryImage(base64Decode(_profileImageBase64!))
-                          : null,
-                      child: _profileImageBase64 == null
-                          ? const Icon(Icons.person, size: 50, color: Colors.grey)
-                          : null,
-                    ),
-                    const Positioned(
-                      bottom: 0,
-                      right: 0,
-                      child: CircleAvatar(
-                        radius: 16,
-                        backgroundColor: Color(0xFF10B981),
-                        child: Icon(Icons.camera_alt, size: 16, color: Colors.white),
-                      ),
-                    ),
+                    Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
+                    const SizedBox(height: 4),
+                    Text(subtitle, style: const TextStyle(fontSize: 12, color: Colors.grey)),
                   ],
                 ),
               ),
-            ),
-            const SizedBox(height: 30),
-            TextField(
-              controller: _nameController,
-              style: const TextStyle(color: Colors.black),
-              decoration: InputDecoration(
-                labelText: 'पूरा नाम',
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.shade300)),
-                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.shade300)),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _skillOrCompanyController,
-              style: const TextStyle(color: Colors.black),
-              decoration: InputDecoration(
-                labelText: _isClient ? 'कंपनी का नाम / मकान विवरण' : 'आपका हुनर (जैसे: राजमिस्त्री, इलेक्ट्रीशियन)',
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.shade300)),
-                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.shade300)),
-              ),
-            ),
-            const SizedBox(height: 24),
-            const Text('आप क्या हैं?', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
-            Row(
-              children: [
-                Expanded(
-                  child: RadioListTile<bool>(
-                    title: const Text('वर्कर', style: TextStyle(color: Colors.black87)),
-                    value: false,
-                    groupValue: _isClient,
-                    activeColor: const Color(0xFF10B981),
-                    onChanged: (val) => setState(() => _isClient = val!),
-                  ),
-                ),
-                Expanded(
-                  child: RadioListTile<bool>(
-                    title: const Text('क्लाइंट', style: TextStyle(color: Colors.black87)),
-                    value: true,
-                    groupValue: _isClient,
-                    activeColor: const Color(0xFF10B981),
-                    onChanged: (val) => setState(() => _isClient = val!),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 30),
-            ElevatedButton(
-              onPressed: _saveProfile,
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 18),
-                backgroundColor: const Color(0xFF10B981),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              ),
-              child: const Text('प्रोफाइल सेव करें और आगे बढ़ें', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
-            ),
-          ],
+              const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+            ],
+          ),
         ),
       ),
     );
@@ -387,7 +335,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
 }
 
 // ---------------------------------------------------------
-// 4. CLIENT DASHBOARD
+// 4. CLIENT DASHBOARD (काम पोस्ट करने का डैशबोर्ड)
 // ---------------------------------------------------------
 class ClientDashboard extends StatefulWidget {
   final String phone;
@@ -457,61 +405,15 @@ class _ClientDashboardState extends State<ClientDashboard> {
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
       appBar: AppBar(
-        title: const Text('क्लाइंट डैशबोर्ड (Viziawork)'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search, color: Color(0xFF10B981)),
-            tooltip: '200+ वर्कर डायरेक्टरी देखें',
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const WorkerDirectoryScreen())),
-          ),
-          IconButton(
-            icon: const Icon(Icons.person, color: Color(0xFF10B981)),
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => ViewProfileScreen(phone: widget.phone))),
-          ),
-        ],
+        title: const Text('क्लाइंट डैशबोर्ड (काम पोस्ट करें)'),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFF10B981).withOpacity(0.3)),
-                boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 10, spreadRadius: 2)],
-              ),
-              child: Column(
-                children: [
-                  const Text('🚀 200+ कैटेगरीज वाली वर्कर डायरेक्टरी', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF10B981))),
-                  const SizedBox(height: 8),
-                  const Text('अपने आस-पास हर जरूरत के मिस्त्री, लेबर, ड्राइवर और दुकानदारों को तुरंत खोजें या अपनी सर्विस जोड़ें।', textAlign: TextAlign.center, style: TextStyle(fontSize: 13, color: Colors.grey)),
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      ElevatedButton.icon(
-                        onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const WorkerDirectoryScreen())),
-                        icon: const Icon(Icons.list_alt, size: 18, color: Colors.white),
-                        label: const Text('डायरेक्टरी खोलें', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                        style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981)),
-                      ),
-                      OutlinedButton.icon(
-                        onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const RegisterWorkerScreen())),
-                        icon: const Icon(Icons.add_box, size: 18, color: Color(0xFF10B981)),
-                        label: const Text('सर्विस रजिस्टर करें', style: TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold)),
-                        style: OutlinedButton.styleFrom(side: const BorderSide(color: Color(0xFF10B981))),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            const Text('या नया काम पोस्ट करें:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
-            const SizedBox(height: 12),
+            const Text('नया काम या प्रोजेक्ट पब्लिश करें:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+            const SizedBox(height: 16),
             TextField(controller: _titleController, style: const TextStyle(color: Colors.black), decoration: InputDecoration(labelText: 'काम का नाम (जैसे: मिस्त्री, प्लंबर, इलेक्ट्रीशियन)', filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)), enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)))),
             const SizedBox(height: 12),
             TextField(controller: _descController, style: const TextStyle(color: Colors.black), decoration: InputDecoration(labelText: 'काम का पूरा विवरण', filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)), enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300))), maxLines: 3),
@@ -546,7 +448,7 @@ class _ClientDashboardState extends State<ClientDashboard> {
                             top: 2,
                             right: 2,
                             child: GestureDetector(
-                              onTap: () => _removeImage(index), // यहाँ onTap कर दिया गया है (त्रुटि ठीक)
+                              onTap: () => _removeImage(index),
                               child: Container(
                                 decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
                                 child: const Icon(Icons.close, size: 18, color: Colors.redAccent),
@@ -573,104 +475,7 @@ class _ClientDashboardState extends State<ClientDashboard> {
 }
 
 // ---------------------------------------------------------
-// 5. WORKER DASHBOARD
-// ---------------------------------------------------------
-class WorkerDashboard extends StatelessWidget {
-  final String phone;
-  const WorkerDashboard({super.key, required this.phone});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
-      appBar: AppBar(title: const Text('वर्कर डैशबोर्ड')),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text('वर्कर डैशबोर्ड में आपका स्वागत है!', style: TextStyle(fontSize: 18, color: Colors.black87)),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const WorkerDirectoryScreen())),
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981)),
-              child: const Text('सभी कामगार डायरेक्टरी देखें', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------
-// 6. VIEW PROFILE SCREEN
-// ---------------------------------------------------------
-class ViewProfileScreen extends StatelessWidget {
-  final String phone;
-  const ViewProfileScreen({super.key, required this.phone});
-
-  @override
-  Widget build(BuildContext context) {
-    DatabaseReference userRef = FirebaseDatabase.instance.ref().child('users').child(phone);
-    return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
-      appBar: AppBar(title: const Text('मेरी प्रोफाइल')),
-      body: FutureBuilder(
-        future: userRef.get(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: Color(0xFF10B981)));
-          }
-          if (!snapshot.hasData || !snapshot.data!.exists) {
-            return const Center(child: Text('प्रोफाइल डेटा उपलब्ध नहीं है', style: TextStyle(color: Colors.grey)));
-          }
-          Map userData = snapshot.data!.value as Map;
-          String name = userData['name'] ?? '';
-          String profileImg = userData['profileImage'] ?? '';
-          String skill = userData['skillOrCompany'] ?? '';
-          int coins = userData['walletCoins'] ?? 0;
-
-          return Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              children: [
-                Center(
-                  child: CircleAvatar(
-                    radius: 50,
-                    backgroundColor: Colors.grey.shade200,
-                    backgroundImage: profileImg.isNotEmpty ? MemoryImage(base64Decode(profileImg)) : null,
-                    child: profileImg.isEmpty ? const Icon(Icons.person, size: 50, color: Colors.grey) : null,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(name, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black)),
-                const SizedBox(height: 4),
-                Text(skill, style: const TextStyle(fontSize: 14, color: Color(0xFF10B981))),
-                const SizedBox(height: 20),
-                ListTile(
-                  tileColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  leading: const Icon(Icons.phone, color: Color(0xFF10B981)),
-                  title: Text('+91 $phone', style: const TextStyle(color: Colors.black87)),
-                ),
-                const SizedBox(height: 12),
-                ListTile(
-                  tileColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  leading: const Icon(Icons.account_balance_wallet, color: Color(0xFF10B981)),
-                  title: Text('वॉलेट कॉइन्स: $coins', style: const TextStyle(color: Colors.black87)),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------
-// 7. WORKER DIRECTORY SCREEN (200 Categories & Search)
+// 5. WORKER DIRECTORY SCREEN (200 Categories & Call Option)
 // ---------------------------------------------------------
 class WorkerDirectoryScreen extends StatefulWidget {
   const WorkerDirectoryScreen({super.key});
@@ -729,14 +534,7 @@ class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
       appBar: AppBar(
-        title: const Text('200+ कामगार और एक्सपर्ट डायरेक्टरी', style: TextStyle(fontSize: 16)),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.person_add, color: Color(0xFF10B981)),
-            tooltip: 'अपनी सर्विस रजिस्टर करें',
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const RegisterWorkerScreen())),
-          ),
-        ],
+        title: const Text('200+ कामगार डायरेक्टरी (कॉल करें)', style: TextStyle(fontSize: 16)),
       ),
       body: Column(
         children: [
@@ -890,7 +688,7 @@ class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
 }
 
 // ---------------------------------------------------------
-// 8. REGISTER WORKER / PROFILE SCREEN
+// 6. REGISTER WORKER SCREEN (मैं काम करने वाला हूँ)
 // ---------------------------------------------------------
 class RegisterWorkerScreen extends StatefulWidget {
   const RegisterWorkerScreen({super.key});
@@ -955,7 +753,7 @@ class _RegisterWorkerScreenState extends State<RegisterWorkerScreen> {
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('आपकी प्रोफाइल सफलतापूर्वक जुड़ गई है!')),
+          const SnackBar(content: Text('आपकी सर्विस सफलतापूर्वक डायरेक्टरी में जुड़ गई है!')),
         );
         Navigator.pop(context);
       } catch (e) {
