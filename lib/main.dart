@@ -31,16 +31,17 @@ class ViziaworkApp extends StatelessWidget {
       title: 'Viziawork',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        scaffoldBackgroundColor: const Color(0xFFF5F7FA),
-        primaryColor: Colors.black,
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: const Color(0xFF0A0E1A),
+        primaryColor: const Color(0xFF10B981),
         fontFamily: 'Roboto',
         appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.white,
-          foregroundColor: Colors.black,
-          elevation: 1,
+          backgroundColor: Color(0xFF111827),
+          foregroundColor: Colors.white,
+          elevation: 0,
           centerTitle: false,
-          titleTextStyle: TextStyle(color: Colors.black, fontSize: 22, fontWeight: FontWeight.w900),
-          iconTheme: IconThemeData(color: Colors.black),
+          titleTextStyle: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+          iconTheme: IconThemeData(color: Colors.white),
         ),
       ),
       home: const LoginScreen(),
@@ -78,7 +79,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFF0A0E1A),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
@@ -86,33 +87,43 @@ class _LoginScreenState extends State<LoginScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Icon(Icons.flash_on_rounded, size: 80, color: Colors.black),
-              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: const Color(0xFF1F2937),
+                  boxShadow: [
+                    BoxShadow(color: const Color(0xFF10B981).withOpacity(0.3), blurRadius: 20, spreadRadius: 5)
+                  ],
+                ),
+                child: const Icon(Icons.flash_on_rounded, size: 50, color: Color(0xFF10B981)),
+              ),
+              const SizedBox(height: 24),
               const Text(
                 'Viziawork',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 36, fontWeight: FontWeight.w900, color: Colors.black, letterSpacing: -1),
+                style: TextStyle(fontSize: 38, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -1),
               ),
               const SizedBox(height: 8),
               const Text(
-                'रोजी-रोटी का सीधा ठिकाना',
+                'रोजी-रोटी का सीधा ठिकाना (2050 Edition)',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 16, color: Colors.grey, fontWeight: FontWeight.w500),
+                style: TextStyle(fontSize: 15, color: Colors.grey, fontWeight: FontWeight.w500),
               ),
               const SizedBox(height: 50),
               TextField(
                 controller: _phoneController,
                 keyboardType: TextInputType.phone,
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black),
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
                 decoration: InputDecoration(
                   labelText: 'मोबाइल नंबर दर्ज करें',
-                  labelStyle: const TextStyle(fontSize: 16, color: Colors.black54, fontWeight: FontWeight.normal),
+                  labelStyle: const TextStyle(color: Colors.grey),
                   prefixText: '+91 ',
-                  prefixStyle: const TextStyle(fontSize: 20, color: Colors.black, fontWeight: FontWeight.bold),
+                  prefixStyle: const TextStyle(fontSize: 18, color: Color(0xFF10B981), fontWeight: FontWeight.bold),
                   filled: true,
-                  fillColor: const Color(0xFFF5F7FA),
+                  fillColor: const Color(0xFF111827),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Colors.black, width: 2)),
+                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF10B981), width: 2)),
                 ),
               ),
               const SizedBox(height: 24),
@@ -121,10 +132,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 18),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  backgroundColor: Colors.black,
-                  elevation: 0,
+                  backgroundColor: const Color(0xFF10B981),
+                  elevation: 5,
                 ),
-                child: const Text('OTP भेजें', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+                child: const Text('OTP भेजें', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black)),
               ),
             ],
           ),
@@ -176,24 +187,24 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(title: const Text('OTP सत्यापन')),
       body: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('+91 ${widget.phone} पर भेजा गया OTP यहाँ दर्ज करें:', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text('+91 ${widget.phone} पर भेजा गया OTP यहाँ दर्ज करें:', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
             const SizedBox(height: 20),
             TextField(
               controller: _otpController,
               keyboardType: TextInputType.number,
               maxLength: 4,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 8),
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 8, color: Colors.white),
               decoration: InputDecoration(
                 hintText: '1234',
+                hintStyle: const TextStyle(color: Colors.grey),
                 filled: true,
-                fillColor: const Color(0xFFF5F7FA),
+                fillColor: const Color(0xFF111827),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
               ),
             ),
@@ -202,10 +213,10 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
               onPressed: _verifyOtp,
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 18),
-                backgroundColor: Colors.black,
+                backgroundColor: const Color(0xFF10B981),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               ),
-              child: const Text('सत्यापित करें (Verify)', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
+              child: const Text('सत्यापित करें', style: TextStyle(fontSize: 18, color: Colors.black, fontWeight: FontWeight.bold)),
             ),
           ],
         ),
@@ -258,6 +269,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       'profileImage': _profileImageBase64 ?? '',
       'rating': 5.0,
       'totalReviews': 0,
+      'walletCoins': 100,
     });
 
     Navigator.pushReplacement(
@@ -269,14 +281,13 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(title: const Text('अपनी प्रोफाइल बनाएं')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text('Viziawork में आपका स्वागत है!\nअपनी सही जानकारी भरें और प्रोफाइल फोटो लगाएं।', style: TextStyle(fontSize: 16, color: Colors.grey)),
+            const Text('Viziawork में आपका स्वागत है!\nअपनी सही जानकारी भरें और प्रोफाइल फोटो लगाएं।', style: TextStyle(fontSize: 15, color: Colors.grey)),
             const SizedBox(height: 20),
             Center(
               child: GestureDetector(
@@ -285,7 +296,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                   children: [
                     CircleAvatar(
                       radius: 50,
-                      backgroundColor: Colors.grey[200],
+                      backgroundColor: const Color(0xFF1F2937),
                       backgroundImage: _profileImageBase64 != null
                           ? MemoryImage(base64Decode(_profileImageBase64!))
                           : null,
@@ -298,8 +309,8 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                       right: 0,
                       child: CircleAvatar(
                         radius: 16,
-                        backgroundColor: Colors.black,
-                        child: Icon(Icons.camera_alt, size: 16, color: Colors.white),
+                        backgroundColor: Color(0xFF10B981),
+                        child: Icon(Icons.camera_alt, size: 16, color: Colors.black),
                       ),
                     ),
                   ],
@@ -312,7 +323,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
               decoration: InputDecoration(
                 labelText: 'पूरा नाम',
                 filled: true,
-                fillColor: const Color(0xFFF5F7FA),
+                fillColor: const Color(0xFF111827),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
               ),
             ),
@@ -322,27 +333,29 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
               decoration: InputDecoration(
                 labelText: _isClient ? 'कंपनी का नाम / मकान विवरण' : 'आपका हुनर (जैसे: राजमिस्त्री, इलेक्ट्रीशियन)',
                 filled: true,
-                fillColor: const Color(0xFFF5F7FA),
+                fillColor: const Color(0xFF111827),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
               ),
             ),
             const SizedBox(height: 24),
-            const Text('आप क्या हैं?', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const Text('आप क्या हैं?', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
             Row(
               children: [
                 Expanded(
                   child: RadioListTile<bool>(
-                    title: const Text('वर्कर'),
+                    title: const Text('वर्कर', style: TextStyle(color: Colors.white)),
                     value: false,
                     groupValue: _isClient,
+                    activeColor: const Color(0xFF10B981),
                     onChanged: (val) => setState(() => _isClient = val!),
                   ),
                 ),
                 Expanded(
                   child: RadioListTile<bool>(
-                    title: const Text('क्लाइंट'),
+                    title: const Text('क्लाइंट', style: TextStyle(color: Colors.white)),
                     value: true,
                     groupValue: _isClient,
+                    activeColor: const Color(0xFF10B981),
                     onChanged: (val) => setState(() => _isClient = val!),
                   ),
                 ),
@@ -353,10 +366,10 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
               onPressed: _saveProfile,
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 18),
-                backgroundColor: Colors.black,
+                backgroundColor: const Color(0xFF10B981),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               ),
-              child: const Text('प्रोफाइल सेव करें और आगे बढ़ें', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
+              child: const Text('प्रोफाइल सेव करें और आगे बढ़ें', style: TextStyle(fontSize: 18, color: Colors.black, fontWeight: FontWeight.bold)),
             ),
           ],
         ),
@@ -366,7 +379,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
 }
 
 // ---------------------------------------------------------
-// 4. CLIENT DASHBOARD
+// 4. CLIENT DASHBOARD (Supports up to 5+ Photos Selection)
 // ---------------------------------------------------------
 class ClientDashboard extends StatefulWidget {
   final String phone;
@@ -391,14 +404,19 @@ class _ClientDashboardState extends State<ClientDashboard> {
     final pickedFiles = await picker.pickMultiImage(imageQuality: 50);
     if (pickedFiles.isNotEmpty) {
       for (var file in pickedFiles) {
-        if (_selectedImagesBase64.length < 5) {
-          File imgFile = File(file.path);
-          List<int> imageBytes = await imgFile.readAsBytes();
-          _selectedImagesBase64.add(base64Encode(imageBytes));
-        }
+        // यहाँ से आप 5 या उससे अधिक फोटो जोड़ सकते हैं
+        File imgFile = File(file.path);
+        List<int> imageBytes = await imgFile.readAsBytes();
+        _selectedImagesBase64.add(base64Encode(imageBytes));
       }
       setState(() {});
     }
+  }
+
+  void _removeImage(int index) {
+    setState(() {
+      _selectedImagesBase64.removeAt(index);
+    });
   }
 
   Future<void> _postJob() async {
@@ -427,79 +445,23 @@ class _ClientDashboardState extends State<ClientDashboard> {
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('काम सफलतापूर्वक पब्लिश हो गया!')));
   }
 
-  void _deleteJob(String jobId) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('पोस्ट डिलीट करें'),
-        content: const Text('क्या आप वाकई इस पोस्ट को हटाना चाहते हैं?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('रद्द करें')),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () async {
-              await _dbRef.child(jobId).remove();
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('पोस्ट डिलीट कर दी गई!')));
-            },
-            child: const Text('डिलीट', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _editJobDialog(Map<dynamic, dynamic> jobData, String jobId) {
-    TextLinkEdit titleEdit = TextLinkEdit(jobData['title'] ?? '');
-    TextLinkEdit budgetEdit = TextLinkEdit(jobData['budget'] ?? '');
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('पोस्ट एडिट करें'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: titleEdit.controller, decoration: const InputDecoration(labelText: 'काम का नाम')),
-            const SizedBox(height: 10),
-            TextField(controller: budgetEdit.controller, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'बजट (₹)')),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('रद्द करें')),
-          ElevatedButton(
-            onPressed: () async {
-              await _dbRef.child(jobId).update({
-                'title': titleEdit.controller.text,
-                'budget': budgetEdit.controller.text,
-              });
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('पोस्ट अपडेट हो गई!')));
-            },
-            child: const Text('सेव करें'),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('क्लाइंट डैशबोर्ड'),
+          title: const Text('क्लाइंट डैशबोर्ड (Viziawork)'),
           actions: [
             IconButton(
-              icon: const Icon(Icons.person),
+              icon: const Icon(Icons.person, color: Color(0xFF10B981)),
               onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => ViewProfileScreen(phone: widget.phone))),
             ),
           ],
           bottom: const TabBar(
-            labelColor: Colors.black,
+            labelColor: Color(0xFF10B981),
             unselectedLabelColor: Colors.grey,
-            indicatorColor: Colors.black,
+            indicatorColor: Color(0xFF10B981),
             tabs: [
               Tab(text: 'नया काम पोस्ट करें', icon: Icon(Icons.add_circle)),
               Tab(text: 'मेरी पोस्ट्स', icon: Icon(Icons.list)),
@@ -512,24 +474,69 @@ class _ClientDashboardState extends State<ClientDashboard> {
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
-                  TextField(controller: _titleController, decoration: const InputDecoration(labelText: 'काम का नाम (जैसे: मिस्त्री, प्लंबर)')),
+                  TextField(controller: _titleController, decoration: InputDecoration(labelText: 'काम का नाम (जैसे: मिस्त्री, प्लंबर, इलेक्ट्रीशियन)', filled: true, fillColor: const Color(0xFF111827))),
                   const SizedBox(height: 12),
-                  TextField(controller: _descController, decoration: const InputDecoration(labelText: 'काम का विवरण'), maxLines: 2),
+                  TextField(controller: _descController, decoration: InputDecoration(labelText: 'काम का पूरा विवरण (कैसे करना है, कितना समय, आदि)', filled: true, fillColor: const Color(0xFF111827)), maxLines: 3),
                   const SizedBox(height: 12),
-                  TextField(controller: _budgetController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'बजट (₹)')),
+                  TextField(controller: _budgetController, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: 'बजट (₹)', filled: true, fillColor: const Color(0xFF111827))),
                   const SizedBox(height: 12),
-                  TextField(controller: _locationController, decoration: const InputDecoration(labelText: 'लोकेशन / पूरा पता')),
+                  TextField(controller: _locationController, decoration: InputDecoration(labelText: 'लोकेशन / पूरा पता', filled: true, fillColor: const Color(0xFF111827))),
                   const SizedBox(height: 16),
                   ElevatedButton.icon(
                     onPressed: _pickImages,
-                    icon: const Icon(Icons.photo),
-                    label: Text('फोटो जोड़ें (${_selectedImagesBase64.length})'),
+                    icon: const Icon(Icons.photo_library, color: Colors.black),
+                    label: const Text('काम की 5 या अधिक फोटो चुनें', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981)),
                   ),
-                  const SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: _isLoading ? null : _postJob,
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.black, minimumSize: const Size(double.infinity, 50)),
-                    child: const Text('पब्लिश करें', style: TextStyle(color: Colors.white, fontSize: 18)),
+                  const SizedBox(height: 16),
+                  _selectedImagesBase64.isNotEmpty
+                      ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('चुनी गई फोटो (${_selectedImagesBase64.length}):', style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                            const SizedBox(height: 8),
+                            SizedBox(
+                              height: 100,
+                              child: ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: _selectedImagesBase64.length,
+                                itemBuilder: (context, index) => Stack(
+                                  children: [
+                                    Container(
+                                      margin: const EdgeInsets.only(right: 8),
+                                      width: 100,
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(12),
+                                        image: DecorationImage(image: MemoryImage(base64Decode(_selectedImagesBase64[index])), fit: BoxFit.cover),
+                                      ),
+                                    ),
+                                    Positioned(
+                                      top: 4,
+                                      right: 12,
+                                      child: GestureDetector(
+                                        onTap: () => _removeImage(index),
+                                        child: const CircleAvatar(
+                                          radius: 12,
+                                          backgroundColor: Colors.red,
+                                          child: Icon(Icons.close, size: 14, color: Colors.white),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        )
+                      : Container(),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _isLoading ? null : _postJob,
+                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981), padding: const EdgeInsets.symmetric(vertical: 16)),
+                      child: _isLoading ? const CircularProgressIndicator(color: Colors.black) : const Text('काम पब्लिश करें', style: TextStyle(fontSize: 18, color: Colors.black, fontWeight: FontWeight.bold)),
+                    ),
                   ),
                 ],
               ),
@@ -537,22 +544,24 @@ class _ClientDashboardState extends State<ClientDashboard> {
             FirebaseAnimatedList(
               query: _dbRef.orderByChild('clientPhone').equalTo(widget.phone),
               itemBuilder: (context, snapshot, animation, index) {
-                final json = snapshot.value as Map<dynamic, dynamic>?;
-                if (json == null) return const SizedBox.shrink();
-                String jobId = snapshot.key ?? '';
-
-                return Card(
-                  margin: const EdgeInsets.all(10),
-                  child: ListTile(
-                    title: Text(json['title'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text('बजट: ₹${json['budget']} | लोकेशन: ${json['location']}'),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(icon: const Icon(Icons.edit, color: Colors.blue), onPressed: () => _editJobDialog(json, jobId)),
-                        IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: () => _deleteJob(jobId)),
-                      ],
-                    ),
+                Map jobData = snapshot.value as Map;
+                return Container(
+                  margin: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF111827),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFF1F2937)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(jobData['title'] ?? '', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                      const SizedBox(height: 4),
+                      Text(jobData['description'] ?? '', style: const TextStyle(color: Colors.grey)),
+                      const SizedBox(height: 8),
+                      Text('बजट: ₹${jobData['budget']}', style: const TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold)),
+                    ],
                   ),
                 );
               },
@@ -564,13 +573,8 @@ class _ClientDashboardState extends State<ClientDashboard> {
   }
 }
 
-class TextLinkEdit {
-  final TextEditingController controller;
-  TextLinkEdit(String text) : controller = TextEditingController(text: text);
-}
-
 // ---------------------------------------------------------
-// 5. WORKER DASHBOARD (यहाँ पोस्ट की फोटो दिखाने का कोड जोड़ दिया है)
+// 5. WORKER DASHBOARD (Zoomable Multiple Photos & Full Details)
 // ---------------------------------------------------------
 class WorkerDashboard extends StatefulWidget {
   final String phone;
@@ -581,60 +585,67 @@ class WorkerDashboard extends StatefulWidget {
 }
 
 class _WorkerDashboardState extends State<WorkerDashboard> {
-  final Set<String> _unlockedJobIds = {};
-  final String myUpiId = "tarun@paytm";
+  final DatabaseReference _dbRef = FirebaseDatabase.instance.ref().child('jobs');
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  int _userCoins = 50;
 
-  Future<void> _launchUpi(String jobId) async {
-    final Uri upiUri = Uri.parse("upi://pay?pa=$myUpiId&pn=Viziawork&am=10.00&cu=INR&tn=UnlockJob");
-    if (await canLaunchUrl(upiUri)) {
-      await launchUrl(upiUri, mode: LaunchMode.externalApplication);
-      setState(() => _unlockedJobIds.add(jobId));
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('सफलतापूर्वक भुगतान के बाद डिटेल्स खुल गई!')));
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('UPI ऐप नहीं मिला')));
-    }
+  @override
+  void initState() {
+    super.initState();
+    _fetchUserCoins();
   }
 
-  void _rateWorkerDialog(String workerPhone) {
-    double selectedRating = 5.0;
+  void _fetchUserCoins() {
+    FirebaseDatabase.instance.ref().child('users').child(widget.phone).child('walletCoins').onValue.listen((event) {
+      if (event.snapshot.value != null) {
+        setState(() {
+          _userCoins = int.parse(event.snapshot.value.toString());
+        });
+      }
+    });
+  }
+
+  void _deductCoinsAndReveal(String clientPhone, String location, String title, String description, String budget) async {
+    if (_userCoins < 10) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('कॉइन खत्म हो गए हैं! कृपया वॉलेट में कॉइन जोड़ें।')));
+      return;
+    }
+
+    int updatedCoins = _userCoins - 10;
+    await FirebaseDatabase.instance.ref().child('users').child(widget.phone).update({'walletCoins': updatedCoins});
+
+    // Show full details dialog with direct call button
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('वर्कर को रेटिंग दें'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('आपको यह काम कैसा लगा? स्टार चुनें:'),
-            Slider(
-              value: selectedRating,
-              min: 1,
-              max: 5,
-              divisions: 4,
-              label: selectedRating.toString(),
-              onChanged: (val) => setState(() => selectedRating = val),
-            ),
-          ],
+        backgroundColor: const Color(0xFF111827),
+        title: const Text('संपर्क और पूरी डीटेल खुली', style: TextStyle(color: Color(0xFF10B981))),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('काम: $title', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+              const SizedBox(height: 8),
+              Text('विवरण: $description', style: const TextStyle(color: Colors.grey)),
+              const SizedBox(height: 8),
+              Text('बजट: ₹$budget', style: const TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Text('लोकेशन: $location', style: const TextStyle(color: Colors.white70)),
+              const SizedBox(height: 12),
+              Text('मालिक का फोन: +91 $clientPhone', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF10B981))),
+            ],
+          ),
         ),
         actions: [
           ElevatedButton(
-            onPressed: () async {
-              DatabaseReference userRef = FirebaseDatabase.instance.ref().child('users').child(workerPhone);
-              DataSnapshot snapshot = await userRef.get();
-              if (snapshot.exists) {
-                Map<dynamic, dynamic> data = snapshot.value as Map<dynamic, dynamic>;
-                double currentRating = (data['rating'] ?? 5.0).toDouble();
-                int totalReviews = (data['totalReviews'] ?? 0) + 1;
-                double newRating = ((currentRating * (totalReviews - 1)) + selectedRating) / totalReviews;
-
-                await userRef.update({
-                  'rating': newRating,
-                  'totalReviews': totalReviews,
-                });
-              }
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981)),
+            onPressed: () {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('रेटिंग सफलतापूर्वक सबमिट हो गई!')));
+              launchUrl(Uri.parse('tel:$clientPhone'));
             },
-            child: const Text('सबमिट करें'),
+            child: const Text('कॉल करें', style: TextStyle(color: Colors.black)),
           ),
         ],
       ),
@@ -643,92 +654,168 @@ class _WorkerDashboardState extends State<WorkerDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    DatabaseReference jobsRef = FirebaseDatabase.instance.ref().child('jobs');
-
     return Scaffold(
       appBar: AppBar(
-        title: const Text('वर्कर डैशबोर्ड (काम की सूची)'),
+        title: const Text('वर्कर डैशबोर्ड (रोजी-रोटी)'),
         actions: [
+          Center(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              margin: const EdgeInsets.only(right: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1F2937),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: const Color(0xFF10B981)),
+              ),
+              child: Text('🪙 कॉइन्स: $_userCoins', style: const TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold)),
+            ),
+          ),
           IconButton(
-            icon: const Icon(Icons.person),
+            icon: const Icon(Icons.person, color: Color(0xFF10B981)),
             onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => ViewProfileScreen(phone: widget.phone))),
           ),
         ],
       ),
-      body: FirebaseAnimatedList(
-        query: jobsRef,
-        itemBuilder: (context, snapshot, animation, index) {
-          final json = snapshot.value as Map<dynamic, dynamic>?;
-          if (json == null) return const SizedBox.shrink();
-
-          String jobId = snapshot.key ?? '';
-          bool isUnlocked = _unlockedJobIds.contains(jobId);
-          
-          // पोस्ट की इमेज फेच करना (Base64 लिस्ट से)
-          List<dynamic> imagesList = json['images'] ?? [];
-
-          return Card(
-            margin: const EdgeInsets.all(12),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(json['title'] ?? '', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 6),
-                  Text(json['description'] ?? '', style: const TextStyle(color: Colors.grey)),
-                  const SizedBox(height: 10),
-                  
-                  // अगर पोस्ट में फोटो है, तो यहाँ दिखाएं
-                  if (imagesList.isNotEmpty)
-                    SizedBox(
-                      height: 120,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: imagesList.length,
-                        itemBuilder: (context, imgIndex) {
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 8.0),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Image.memory(
-                                base64Decode(imagesList[imgIndex]),
-                                width: 120,
-                                height: 120,
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  const SizedBox(height: 10),
-                  Text('बजट: ₹${json['budget']}', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
-                  Text(isUnlocked ? 'लोकेशन: ${json['location']}' : 'लोकेशन: [₹10 देकर खोलें]', style: TextStyle(color: isUnlocked ? Colors.black : Colors.red)),
-                  Text(isUnlocked ? 'मोबाइल नंबर: ${json['clientPhone']}' : 'नंबर: [ब्लर किया गया]'),
-                  const SizedBox(height: 10),
-                  if (!isUnlocked)
-                    ElevatedButton(
-                      onPressed: () => _launchUpi(jobId),
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.black),
-                      child: const Text('₹10 देकर पूरा पता और नंबर खोलें', style: TextStyle(color: Colors.white)),
-                    ),
-                  TextButton(
-                    onPressed: () => _rateWorkerDialog(widget.phone),
-                    child: const Text('इस काम की परफॉर्मेंस पर रेटिंग दें'),
-                  ),
-                ],
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: TextField(
+              controller: _searchController,
+              onChanged: (val) => setState(() => _searchQuery = val.toLowerCase()),
+              decoration: InputDecoration(
+                hintText: 'काम या हुनर खोजें...',
+                prefixIcon: const Icon(Icons.search, color: Color(0xFF10B981)),
+                filled: true,
+                fillColor: const Color(0xFF111827),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
               ),
             ),
-          );
-        },
+          ),
+          Expanded(
+            child: FirebaseAnimatedList(
+              query: _dbRef,
+              itemBuilder: (context, snapshot, animation, index) {
+                Map jobData = snapshot.value as Map;
+                String title = jobData['title'] ?? '';
+                String desc = jobData['description'] ?? '';
+                String budget = jobData['budget'] ?? '';
+                String location = jobData['location'] ?? 'लोकेशन सुरक्षित';
+                String clientPhone = jobData['clientPhone'] ?? '';
+                List images = jobData['images'] ?? [];
+
+                if (_searchQuery.isNotEmpty && !title.toLowerCase().contains(_searchQuery)) {
+                  return Container();
+                }
+
+                return Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF111827),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 10, offset: const Offset(0, 4))],
+                    border: Border.all(color: const Color(0xFF1F2937)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.white)),
+                      const SizedBox(height: 6),
+                      Text(desc, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14, color: Colors.grey)),
+                      const SizedBox(height: 12),
+                      images.isNotEmpty
+                          ? SizedBox(
+                              height: 150,
+                              child: ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: images.length,
+                                itemBuilder: (context, imgIndex) => GestureDetector(
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => FullScreenImageViewer(imageBase64: images[imgIndex]),
+                                      ),
+                                    );
+                                  },
+                                  child: Container(
+                                    margin: const EdgeInsets.only(right: 8),
+                                    width: 150,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(12),
+                                      image: DecorationImage(image: MemoryImage(base64Decode(images[imgIndex])), fit: BoxFit.cover),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            )
+                          : Container(),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.between,
+                        children: [
+                          Text('बजट: ₹$budget', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF10B981))),
+                          const Text('लोकेशन: [🪙 10 देकर खोलें]', style: TextStyle(fontSize: 12, color: Colors.redAccent)),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: () => _deductCoinsAndReveal(clientPhone, location, title, desc, budget),
+                          icon: const Icon(Icons.phone, color: Colors.black),
+                          label: const Text('10 कॉइन देकर पूरी डिटेल और नंबर खोलें', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF10B981),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
 // ---------------------------------------------------------
-// 6. VIEW PROFILE SCREEN
+// 6. FULL SCREEN ZOOMABLE IMAGE VIEWER
+// ---------------------------------------------------------
+class FullScreenImageViewer extends StatelessWidget {
+  final String imageBase64;
+  const FullScreenImageViewer({super.key, required this.imageBase64});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
+      body: Center(
+        child: InteractiveViewer(
+          panEnabled: true,
+          boundaryMargin: const EdgeInsets.all(20),
+          minScale: 0.5,
+          maxScale: 4.0,
+          child: Image.memory(base64Decode(imageBase64)),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------
+// 7. VIEW PROFILE SCREEN
 // ---------------------------------------------------------
 class ViewProfileScreen extends StatelessWidget {
   final String phone;
@@ -736,50 +823,63 @@ class ViewProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    DatabaseReference userRef = FirebaseDatabase.instance.ref().child('users').child(phone);
-
     return Scaffold(
-      appBar: AppBar(title: const Text('मेरी प्रोफाइल और रेटिंग')),
+      appBar: AppBar(title: const Text('मेरी प्रोफाइल')),
       body: FutureBuilder(
-        future: userRef.get(),
+        future: FirebaseDatabase.instance.ref().child('users').child(phone).get(),
         builder: (context, snapshot) {
           if (!snapshot.hasData || snapshot.data?.value == null) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: CircularProgressIndicator(color: Color(0xFF10B981)));
           }
-          Map<dynamic, dynamic> data = snapshot.data!.value as Map<dynamic, dynamic>;
-          String? profileImageBase64 = data['profileImage'];
-
+          Map userData = snapshot.data!.value as Map;
           return Padding(
             padding: const EdgeInsets.all(24.0),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Center(
                   child: CircleAvatar(
                     radius: 50,
-                    backgroundColor: Colors.black,
-                    backgroundImage: profileImageBase64 != null && profileImageBase64.isNotEmpty
-                        ? MemoryImage(base64Decode(profileImageBase64))
+                    backgroundColor: const Color(0xFF1F2937),
+                    backgroundImage: userData['profileImage'] != null && userData['profileImage'].isNotEmpty
+                        ? MemoryImage(base64Decode(userData['profileImage']))
                         : null,
-                    child: profileImageBase64 == null || profileImageBase64.isEmpty
-                        ? Text(data['name']?[0] ?? 'U', style: const TextStyle(fontSize: 40, color: Colors.white))
+                    child: userData['profileImage'] == null || userData['profileImage'].isEmpty
+                        ? const Icon(Icons.person, size: 50, color: Colors.grey)
                         : null,
                   ),
                 ),
                 const SizedBox(height: 20),
-                Text('नाम: ${data['name']}', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-                Text('मोबाइल: +91 ${data['phone']}', style: const TextStyle(fontSize: 16, color: Colors.grey)),
-                Text('हुनर / कंपनी: ${data['skillOrCompany']}', style: const TextStyle(fontSize: 16)),
-                const Divider(height: 40),
-                Row(
-                  children: [
-                    const Icon(Icons.star, color: Colors.amber, size: 30),
-                    const SizedBox(width: 8),
-                    Text('${(data['rating'] ?? 5.0).toStringAsFixed(1)} स्टार रेटिंग', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                  ],
-                ),
+                Text(userData['name'] ?? '', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
                 const SizedBox(height: 8),
-                Text('कुल रिव्यूज: ${data['totalReviews'] ?? 0}', style: const TextStyle(fontSize: 16, color: Colors.grey)),
+                Text('+91 ${userData['phone']}', style: const TextStyle(fontSize: 16, color: Colors.grey)),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF111827),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      Column(
+                        children: [
+                          const Text('वॉलेट कॉइन्स', style: TextStyle(color: Colors.grey)),
+                          const SizedBox(height: 4),
+                          Text('🪙 ${userData['walletCoins'] ?? 0}', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF10B981))),
+                        ],
+                      ),
+                      Column(
+                        children: [
+                          const Text('रेटिंग', style: TextStyle(color: Colors.grey)),
+                          const SizedBox(height: 4),
+                          Text('⭐ ${userData['rating'] ?? 5.0}', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.amber)),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           );
