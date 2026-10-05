@@ -39,7 +39,7 @@ class ViziaworkApp extends StatelessWidget {
           foregroundColor: Colors.black,
           elevation: 1,
           centerTitle: false,
-          titleTextStyle: TextStyle(color: Colors.black, fontSize: 20, fontWeight: FontWeight.bold),
+          titleTextStyle: TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold),
           iconTheme: IconThemeData(color: Colors.black),
         ),
       ),
@@ -236,30 +236,28 @@ class RoleSelectionScreen extends StatelessWidget {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
             ),
             const SizedBox(height: 35),
-            
             _buildRoleCard(
               context,
               title: 'मुझे काम कराना है / मिस्त्री ढूंढना है',
-              subtitle: 'कुछ भी सर्च करें (जैसे: मिस्त्री, टंकी साफ) और सीधा कॉल करें',
+              subtitle: 'कुछ भी सर्च करें, ₹10/कॉल कटेगा और ₹100, ₹200, ₹500 का रीचार्ज करें',
               icon: Icons.search_rounded,
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const WorkerDirectoryScreen()),
+                  MaterialPageRoute(builder: (context) => CustomerServiceScreen(clientPhone: phone)),
                 );
               },
             ),
             const SizedBox(height: 20),
-
             _buildRoleCard(
               context,
               title: 'मैं कारीगर हूँ (अपनी प्रोफाइल बनाएं)',
-              subtitle: 'अपना हुनर खुद टाइप करें ताकि लोग आपको सीधा फोन कर सकें',
+              subtitle: 'प्रोफाइल बनाएं और ₹100, ₹200, ₹500 का सब्सक्रिप्शन रीचार्ज करें',
               icon: Icons.engineering_rounded,
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const RegisterWorkerScreen()),
+                  MaterialPageRoute(builder: (context) => RegisterWorkerScreen(workerPhone: phone)),
                 );
               },
             ),
@@ -310,35 +308,248 @@ class RoleSelectionScreen extends StatelessWidget {
 }
 
 // ---------------------------------------------------------
-// 4. WORKER DIRECTORY & SEARCH SCREEN (Instagram जैसा Infinite Scroll सिस्टम)
+// 4. PAYMENT HELPERS & UPI DIALOG SYSTEM (CENTRAL + AIRTEL BANK)
 // ---------------------------------------------------------
-class WorkerDirectoryScreen extends StatefulWidget {
-  const WorkerDirectoryScreen({super.key});
+class PaymentHelper {
+  static const String centralBankUpi = "9971968060@centralbank";
+  static const String airtelBankUpi = "9971968060@airtel";
 
-  @override
-  State<WorkerDirectoryScreen> createState() => _WorkerDirectoryScreenState();
+  static Future<bool> launchUpi({
+    required BuildContext context,
+    required String upiId,
+    required int amount,
+    required String note,
+  }) async {
+    final String upiUrl = 'upi://pay?pa=$upiId&pn=Viziawork&am=$amount&cu=INR&tn=$note';
+    final Uri uri = Uri.parse(upiUrl);
+
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+      return true;
+    } else {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('कोई UPI ऐप (Paytm/GPay/PhonePe) नहीं मिला')),
+        );
+      }
+      return false;
+    }
+  }
+
+  static void showPaymentBottomSheet({
+    required BuildContext context,
+    required Function(int amount) onSuccess,
+    bool isWorkerSubscription = false,
+  }) {
+    int selectedAmount = 100;
+    String selectedUpi = centralBankUpi;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    isWorkerSubscription ? 'सब्सक्रिप्शन प्लान लें' : 'वॉलेट रीचार्ज करें',
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    isWorkerSubscription
+                        ? 'अपनी प्रोफाइल एक्टिव रखने के लिए प्लान चुनें'
+                        : 'कारीगर को संपर्क करने पर वॉलेट से ₹10 काटेंगे',
+                    style: const TextStyle(fontSize: 13, color: Colors.grey),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 20),
+
+                  const Text('1. प्लान / अमाउंट चुनें:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [100, 200, 500].map((amt) {
+                      bool isSelected = selectedAmount == amt;
+                      return ChoiceChip(
+                        label: Text('₹$amt', style: TextStyle(color: isSelected ? Colors.white : Colors.black, fontWeight: FontWeight.bold)),
+                        selected: isSelected,
+                        selectedColor: const Color(0xFF10B981),
+                        backgroundColor: Colors.grey.shade200,
+                        onSelected: (val) {
+                          if (val) setModalState(() => selectedAmount = amt);
+                        },
+                      );
+                    }).toList(),
+                  ),
+
+                  const SizedBox(height: 20),
+                  const Text('2. बैंक UPI विकल्प चुनें:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 10),
+
+                  Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(color: selectedUpi == centralBankUpi ? const Color(0xFF10B981) : Colors.grey.shade300, width: 2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: RadioListTile<String>(
+                      title: const Text('Central Bank of India', style: TextStyle(fontWeight: FontWeight.bold)),
+                      subtitle: Text(centralBankUpi, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                      value: centralBankUpi,
+                      groupValue: selectedUpi,
+                      activeColor: const Color(0xFF10B981),
+                      onChanged: (val) => setModalState(() => selectedUpi = val!),
+                    ),
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(color: selectedUpi == airtelBankUpi ? const Color(0xFF10B981) : Colors.grey.shade300, width: 2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: RadioListTile<String>(
+                      title: const Text('Airtel Payments Bank', style: TextStyle(fontWeight: FontWeight.bold)),
+                      subtitle: Text(airtelBankUpi, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                      value: airtelBankUpi,
+                      groupValue: selectedUpi,
+                      activeColor: const Color(0xFF10B981),
+                      onChanged: (val) => setModalState(() => selectedUpi = val!),
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF10B981),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                    onPressed: () async {
+                      Navigator.pop(sheetContext);
+                      bool ok = await launchUpi(
+                        context: context,
+                        upiId: selectedUpi,
+                        amount: selectedAmount,
+                        note: isWorkerSubscription ? 'Worker_Subscription' : 'Client_Wallet_Recharge',
+                      );
+                      if (ok) {
+                        onSuccess(selectedAmount);
+                      }
+                    },
+                    child: Text('₹$selectedAmount भुगतान करें', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
 }
 
-class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
+// ---------------------------------------------------------
+// 5. CUSTOMER SERVICE SCREEN (₹10 कटने का पूरा लॉजिक)
+// ---------------------------------------------------------
+class CustomerServiceScreen extends StatefulWidget {
+  final String clientPhone;
+
+  const CustomerServiceScreen({super.key, required this.clientPhone});
+
+  @override
+  State<CustomerServiceScreen> createState() => _CustomerServiceScreenState();
+}
+
+class _CustomerServiceScreenState extends State<CustomerServiceScreen> {
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
-  
-  // शुरुआत में 15 प्रोफाइल्स लोड होंगी
   int _displayLimit = 15;
+  int _walletBalance = 0;
+
   final ScrollController _scrollController = ScrollController();
   final DatabaseReference _workersRef = FirebaseDatabase.instance.ref().child('public_workers');
+  late DatabaseReference _clientRef;
 
   @override
   void initState() {
     super.initState();
-    // जैसे ही यूजर नीचे स्क्रॉल करेगा, और डेटा लोड हो जाएगा (Instagram स्टाइल)
+    _clientRef = FirebaseDatabase.instance.ref().child('clients').child(widget.clientPhone);
+    _loadWalletBalance();
+
     _scrollController.addListener(() {
       if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
         setState(() {
-          _displayLimit += 15; // 15 और जुड़ जाएंगे
+          _displayLimit += 15;
         });
       }
     });
+  }
+
+  void _loadWalletBalance() {
+    _clientRef.child('wallet_balance').onValue.listen((event) {
+      if (event.snapshot.value != null) {
+        setState(() {
+          _walletBalance = (event.snapshot.value as num).toInt();
+        });
+      } else {
+        _clientRef.set({'wallet_balance': 0});
+      }
+    });
+  }
+
+  void _openRechargeSheet() {
+    PaymentHelper.showPaymentBottomSheet(
+      context: context,
+      isWorkerSubscription: false,
+      onSuccess: (amt) async {
+        await _clientRef.update({'wallet_balance': _walletBalance + amt});
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('₹$amt सफ़लतापूर्वक रीचार्ज हुए!')));
+        }
+      },
+    );
+  }
+
+  Future<void> _handleContactAction(String phone, String type) async {
+    if (_walletBalance < 10) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('बैलेंस कम है!'),
+          content: const Text('कारीगर से बात करने के लिए वॉलेट में कम से कम ₹10 होना आवश्यक है।'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('रद्द करें')),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981)),
+              onPressed: () {
+                Navigator.pop(context);
+                _openRechargeSheet();
+              },
+              child: const Text('रीचार्ज करें', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    await _clientRef.update({'wallet_balance': _walletBalance - 10});
+
+    if (type == 'call') {
+      launchUrl(Uri.parse('tel:$phone'));
+    } else {
+      launchUrl(Uri.parse('whatsapp://send?phone=+91$phone&text=नमस्ते, मुझे आपके काम की जरूरत है।'));
+    }
   }
 
   @override
@@ -352,11 +563,21 @@ class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('कारीगर खोजें और बात करें', style: TextStyle(fontSize: 16)),
+        title: const Text('कारीगर खोजें'),
+        actions: [
+          Container(
+            margin: const EdgeInsets.only(right: 16),
+            child: ActionChip(
+              backgroundColor: const Color(0xFF10B981).withOpacity(0.15),
+              avatar: const Icon(Icons.account_balance_wallet, size: 18, color: Color(0xFF10B981)),
+              label: Text('₹$_walletBalance', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF10B981))),
+              onPressed: _openRechargeSheet,
+            ),
+          ),
+        ],
       ),
       body: Column(
         children: [
-          // पावरफुल सर्च बार
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: TextField(
@@ -368,7 +589,7 @@ class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
               },
               style: const TextStyle(color: Colors.black, fontSize: 16),
               decoration: InputDecoration(
-                hintText: 'यहाँ लिखें क्या चाहिए (जैसे: मिस्त्री, टंकी साफ, प्लंबर)...',
+                hintText: 'क्या काम चाहिए? (जैसे: प्लंबर, मिस्त्री, कारपेंटर)...',
                 hintStyle: const TextStyle(color: Colors.grey, fontSize: 14),
                 prefixIcon: const Icon(Icons.search, color: Color(0xFF10B981)),
                 suffixIcon: _searchQuery.isNotEmpty
@@ -390,7 +611,6 @@ class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
             ),
           ),
           const Divider(color: Colors.grey, height: 1),
-          // लाइव वर्कर्स लिस्ट (Instagram जैसी स्मूथ लोडिंग के साथ)
           Expanded(
             child: FirebaseAnimatedList(
               query: _workersRef.limitToFirst(_displayLimit),
@@ -404,14 +624,11 @@ class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
                 String address = workerData['address'] ?? '';
                 String profileImg = workerData['profileImage'] ?? '';
 
-                // सर्च के आधार पर नाम या हुनर मैच करना
                 bool matchesSearch = _searchQuery.isEmpty || 
                     name.toLowerCase().contains(_searchQuery) || 
                     skill.toLowerCase().contains(_searchQuery);
 
-                if (!matchesSearch) {
-                  return Container();
-                }
+                if (!matchesSearch) return Container();
 
                 return Container(
                   margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -446,21 +663,14 @@ class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
                             if (address.isNotEmpty)
                               Text('पता: $address', style: const TextStyle(color: Colors.black54, fontSize: 12)),
                             const SizedBox(height: 2),
-                            const Text('पैसा फोन पर तय करें (डायरेक्ट बात)', style: TextStyle(color: Colors.grey, fontSize: 11, fontStyle: FontStyle.italic)),
+                            const Text('संपर्क करने पर ₹10 कटेगा', style: TextStyle(color: Colors.grey, fontSize: 11, fontStyle: FontStyle.italic)),
                           ],
                         ),
                       ),
-                      // कॉल और व्हाट्सएप बटन
                       Column(
                         children: [
                           IconButton(
-                            onPressed: () {
-                              if (phone.isNotEmpty) {
-                                launchUrl(Uri.parse('tel:$phone'));
-                              } else {
-                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('फोन नंबर उपलब्ध नहीं है')));
-                              }
-                            },
+                            onPressed: () => _handleContactAction(phone, 'call'),
                             icon: const CircleAvatar(
                               radius: 20,
                               backgroundColor: Color(0xFF10B981),
@@ -469,13 +679,7 @@ class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
                           ),
                           const SizedBox(height: 2),
                           IconButton(
-                            onPressed: () {
-                              if (phone.isNotEmpty) {
-                                launchUrl(Uri.parse('whatsapp://send?phone=+91$phone&text=नमस्ते, मुझे आपके काम की जरूरत है।'));
-                              } else {
-                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('WhatsApp नंबर उपलब्ध नहीं है')));
-                              }
-                            },
+                            onPressed: () => _handleContactAction(phone, 'whatsapp'),
                             icon: const CircleAvatar(
                               radius: 20,
                               backgroundColor: Colors.green,
@@ -497,10 +701,11 @@ class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
 }
 
 // ---------------------------------------------------------
-// 5. REGISTER WORKER SCREEN (खुद हाथ से हुनर टाइप करने की सुविधा)
+// 6. REGISTER WORKER SCREEN (सब्सक्रिप्शन प्लान चयन)
 // ---------------------------------------------------------
 class RegisterWorkerScreen extends StatefulWidget {
-  const RegisterWorkerScreen({super.key});
+  final String workerPhone;
+  const RegisterWorkerScreen({super.key, required this.workerPhone});
 
   @override
   State<RegisterWorkerScreen> createState() => _RegisterWorkerScreenState();
@@ -515,6 +720,12 @@ class _RegisterWorkerScreenState extends State<RegisterWorkerScreen> {
   String? _base64Image;
   bool _isUploading = false;
 
+  @override
+  void initState() {
+    super.initState();
+    _phoneController.text = widget.workerPhone;
+  }
+
   Future<void> _pickImage() async {
     final ImagePicker picker = ImagePicker();
     final XFile? image = await picker.pickImage(source: ImageSource.gallery, imageQuality: 50);
@@ -526,7 +737,7 @@ class _RegisterWorkerScreenState extends State<RegisterWorkerScreen> {
     }
   }
 
-  void _registerWorker() async {
+  void _startRegistrationWithSubscription() {
     String name = _nameController.text.trim();
     String phone = _phoneController.text.trim();
     String skill = _skillController.text.trim();
@@ -539,38 +750,46 @@ class _RegisterWorkerScreenState extends State<RegisterWorkerScreen> {
       return;
     }
 
-    setState(() {
-      _isUploading = true;
-    });
-
-    try {
-      DatabaseReference ref = FirebaseDatabase.instance.ref().child('public_workers').push();
-      await ref.set({
-        'name': name,
-        'phone': phone,
-        'skill': skill,
-        'address': address,
-        'profileImage': _base64Image ?? '',
-        'createdAt': ServerValue.timestamp,
-      });
-
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('बधाई हो! आपकी प्रोफाइल लाइव हो गई है')),
-      );
-      Navigator.pop(context);
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('त्रुटि: $e')),
-      );
-    } finally {
-      if (mounted) {
+    PaymentHelper.showPaymentBottomSheet(
+      context: context,
+      isWorkerSubscription: true,
+      onSuccess: (paidAmount) async {
         setState(() {
-          _isUploading = false;
+          _isUploading = true;
         });
-      }
-    }
+
+        try {
+          DatabaseReference ref = FirebaseDatabase.instance.ref().child('public_workers').child(phone);
+          await ref.set({
+            'name': name,
+            'phone': phone,
+            'skill': skill,
+            'address': address,
+            'profileImage': _base64Image ?? '',
+            'subscriptionBalance': paidAmount,
+            'createdAt': ServerValue.timestamp,
+          });
+
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('बधाई हो! आपकी प्रोफाइल लाइव हो गई है')),
+          );
+          Navigator.pop(context);
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('त्रुटि: $e')),
+            );
+          }
+        } finally {
+          if (mounted) {
+            setState(() {
+              _isUploading = false;
+            });
+          }
+        }
+      },
+    );
   }
 
   @override
@@ -609,7 +828,7 @@ class _RegisterWorkerScreenState extends State<RegisterWorkerScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 30),
+            const SizedBox(height: 24),
             TextField(
               controller: _nameController,
               decoration: InputDecoration(
@@ -635,7 +854,7 @@ class _RegisterWorkerScreenState extends State<RegisterWorkerScreen> {
             TextField(
               controller: _skillController,
               decoration: InputDecoration(
-                labelText: 'अपना हुनर लिखें (जैसे: एसी रिपेयर, कारपेंटर)',
+                labelText: 'अपना हुनर (जैसे: एसी रिपेयर, प्लंबर, राजमिस्त्री)',
                 filled: true,
                 fillColor: Colors.white,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
@@ -653,7 +872,7 @@ class _RegisterWorkerScreenState extends State<RegisterWorkerScreen> {
             ),
             const SizedBox(height: 30),
             ElevatedButton(
-              onPressed: _isUploading ? null : _registerWorker,
+              onPressed: _isUploading ? null : _startRegistrationWithSubscription,
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 18),
                 backgroundColor: const Color(0xFF10B981),
@@ -661,7 +880,7 @@ class _RegisterWorkerScreenState extends State<RegisterWorkerScreen> {
               ),
               child: _isUploading
                   ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text('प्रोफाइल लाइव करें', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
+                  : const Text('सब्सक्रिप्शन चुनें और प्रोफाइल लाइव करें', style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold)),
             ),
           ],
         ),
