@@ -307,7 +307,7 @@ class RoleSelectionScreen extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------
+ // ---------------------------------------------------------
 // 4. PAYMENT HELPERS & UPI DIALOG SYSTEM (CENTRAL + AIRTEL BANK)
 // ---------------------------------------------------------
 class PaymentHelper {
@@ -323,13 +323,17 @@ class PaymentHelper {
     final String upiUrl = 'upi://pay?pa=$upiId&pn=Viziawork&am=$amount&cu=INR&tn=$note';
     final Uri uri = Uri.parse(upiUrl);
 
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-      return true;
-    } else {
+    try {
+      // canLaunchUrl हटाकर सीधे externalNonBrowserApplication मोड में लॉन्च करें
+      final bool launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalNonBrowserApplication,
+      );
+      return launched;
+    } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('कोई UPI ऐप (Paytm/GPay/PhonePe) नहीं मिला')),
+          const SnackBar(content: Text('UPI ऐप खोलने में समस्या आई या कोई ऐप नहीं मिला')),
         );
       }
       return false;
@@ -457,7 +461,8 @@ class PaymentHelper {
     );
   }
 }
-
+               
+                    
 // ---------------------------------------------------------
 // 5. CUSTOMER SERVICE SCREEN (₹10 कटने का पूरा लॉजिक)
 // ---------------------------------------------------------
