@@ -1,4 +1,3 @@
-
 import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
@@ -209,7 +208,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
 }
 
 // ---------------------------------------------------------
-// 3. ROLE SELECTION SCREEN (100% FREE ONBOARDING)
+// 3. ROLE SELECTION SCREEN
 // ---------------------------------------------------------
 class RoleSelectionScreen extends StatelessWidget {
   final String phone;
@@ -313,7 +312,7 @@ class RoleSelectionScreen extends StatelessWidget {
 }
 
 // ---------------------------------------------------------
-// 4. MAIN HOME SCREEN (KOTI / MISTRY & SHOP MARKETPLACE)
+// 4. MAIN HOME SCREEN
 // ---------------------------------------------------------
 class HomeScreen extends StatefulWidget {
   final String userPhone;
@@ -480,7 +479,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         child: ElevatedButton.icon(
           onPressed: _showGenerateCodeDialog,
           icon: const Icon(Icons.qr_code_2, color: Colors.white),
-          label: const Text('दुकान बिल कोड (Dynamic 4-Digit Code) बनाएं', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+          label: const Text('दुकान बिल कोड (Dynamic 4-Digit Code) बनाएं', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF10B981),
             padding: const EdgeInsets.symmetric(vertical: 16),
@@ -498,13 +497,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       itemBuilder: (context, snapshot, animation, index) {
         if (snapshot.value == null) return Container();
         Map worker = snapshot.value as Map;
+        String imgStr = worker['profileImage'] ?? '';
+
         return Card(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           child: ListTile(
             leading: CircleAvatar(
               backgroundColor: const Color(0xFF10B981).withOpacity(0.2),
-              child: const Icon(Icons.person, color: Color(0xFF10B981)),
+              backgroundImage: imgStr.isNotEmpty ? MemoryImage(base64Decode(imgStr)) : null,
+              child: imgStr.isEmpty ? const Icon(Icons.person, color: Color(0xFF10B981)) : null,
             ),
             title: Text(worker['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
             subtitle: Text('${worker['skill']} • ${worker['address']}'),
@@ -535,15 +537,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         if (snapshot.value == null) return Container();
         Map shop = snapshot.value as Map;
         String tier = shop['subscription_tier'] ?? 'FREE';
+        String imgStr = shop['shopImage'] ?? '';
 
         return Card(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           child: ListTile(
-            leading: Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(color: Colors.orange.withOpacity(0.1), shape: BoxShape.circle),
-              child: const Icon(Icons.store, color: Colors.orange),
+            leading: CircleAvatar(
+              backgroundColor: Colors.orange.withOpacity(0.2),
+              backgroundImage: imgStr.isNotEmpty ? MemoryImage(base64Decode(imgStr)) : null,
+              child: imgStr.isEmpty ? const Icon(Icons.store, color: Colors.orange) : null,
             ),
             title: Row(
               children: [
@@ -567,7 +570,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 }
 
 // ---------------------------------------------------------
-// 5. REGISTER WORKER / CONTRACTOR (100% FREE)
+// 5. REGISTER WORKER / CONTRACTOR (WITH BASE64 IMAGE)
 // ---------------------------------------------------------
 class RegisterWorkerScreen extends StatefulWidget {
   final String workerPhone;
@@ -582,6 +585,18 @@ class _RegisterWorkerScreenState extends State<RegisterWorkerScreen> {
   final TextEditingController _skillController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
   bool _isContractor = false;
+  String? _base64Image;
+
+  Future<void> _pickImage() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery, imageQuality: 40);
+    if (image != null) {
+      Uint8List bytes = await image.readAsBytes();
+      setState(() {
+        _base64Image = base64Encode(bytes);
+      });
+    }
+  }
 
   void _register() async {
     if (_nameController.text.isEmpty || _skillController.text.isEmpty) {
@@ -596,6 +611,7 @@ class _RegisterWorkerScreenState extends State<RegisterWorkerScreen> {
       'skill': _skillController.text.trim(),
       'address': _addressController.text.trim(),
       'isContractor': _isContractor,
+      'profileImage': _base64Image ?? '',
       'createdAt': ServerValue.timestamp,
     });
 
@@ -611,12 +627,37 @@ class _RegisterWorkerScreenState extends State<RegisterWorkerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('कारीगर / ठेकेदार मुफ़्त रजिस्ट्रेशन')),
-      body: Padding(
+      appBar: AppBar(title: const Text('कारीगर / ठेकेदार रजिस्ट्रेशन')),
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            Center(
+              child: Stack(
+                children: [
+                  CircleAvatar(
+                    radius: 45,
+                    backgroundColor: Colors.grey.shade200,
+                    backgroundImage: _base64Image != null ? MemoryImage(base64Decode(_base64Image!)) : null,
+                    child: _base64Image == null ? const Icon(Icons.person, size: 45, color: Colors.grey) : null,
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: InkWell(
+                      onTap: _pickImage,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: const BoxDecoration(color: Color(0xFF10B981), shape: BoxShape.circle),
+                        child: const Icon(Icons.camera_alt, color: Colors.white, size: 18),
+                      ),
+                    ),
+                  )
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
             TextField(controller: _nameController, decoration: InputDecoration(labelText: 'पूरा नाम', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)))),
             const SizedBox(height: 16),
             TextField(controller: _skillController, decoration: InputDecoration(labelText: 'हुनर (जैसे: टाइल्स मिस्त्री, पेंटर, ठेकेदार)', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)))),
@@ -642,7 +683,126 @@ class _RegisterWorkerScreenState extends State<RegisterWorkerScreen> {
 }
 
 // ---------------------------------------------------------
-// 6. SHOPKEEPER DASHBOARD (CODE VERIFICATION & 3% COMMISSION)
+// 6. SHOPKEEPER REGISTER / EDIT FORM
+// ---------------------------------------------------------
+class RegisterShopScreen extends StatefulWidget {
+  final String shopPhone;
+  final Map? existingData;
+
+  const RegisterShopScreen({super.key, required this.shopPhone, this.existingData});
+
+  @override
+  State<RegisterShopScreen> createState() => _RegisterShopScreenState();
+}
+
+class _RegisterShopScreenState extends State<RegisterShopScreen> {
+  final TextEditingController _shopNameController = TextEditingController();
+  final TextEditingController _categoryController = TextEditingController();
+  final TextEditingController _addressController = TextEditingController();
+  String? _base64Image;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.existingData != null) {
+      _shopNameController.text = widget.existingData!['shop_name'] ?? '';
+      _categoryController.text = widget.existingData!['category'] ?? '';
+      _addressController.text = widget.existingData!['address'] ?? '';
+      _base64Image = widget.existingData!['shopImage'] ?? '';
+    }
+  }
+
+  Future<void> _pickImage() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery, imageQuality: 40);
+    if (image != null) {
+      Uint8List bytes = await image.readAsBytes();
+      setState(() {
+        _base64Image = base64Encode(bytes);
+      });
+    }
+  }
+
+  void _saveShop() async {
+    if (_shopNameController.text.isEmpty || _categoryController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('कृपया दुकान का नाम और कैटेगरी भरें')));
+      return;
+    }
+
+    DatabaseReference ref = FirebaseDatabase.instance.ref().child('shops').child(widget.shopPhone);
+    await ref.set({
+      'shop_name': _shopNameController.text.trim(),
+      'phone': widget.shopPhone,
+      'category': _categoryController.text.trim(),
+      'address': _addressController.text.trim(),
+      'shopImage': _base64Image ?? '',
+      'subscription_tier': widget.existingData?['subscription_tier'] ?? 'FREE',
+      'updatedAt': ServerValue.timestamp,
+    });
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('दुकान की जानकारी सेव हो गई!')));
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => ShopkeeperDashboardScreen(shopPhone: widget.shopPhone)),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(widget.existingData != null ? 'दुकान की जानकारी बदलें' : 'अपनी दुकान लिस्ट करें')),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Stack(
+                children: [
+                  CircleAvatar(
+                    radius: 50,
+                    backgroundColor: Colors.grey.shade200,
+                    backgroundImage: _base64Image != null && _base64Image!.isNotEmpty ? MemoryImage(base64Decode(_base64Image!)) : null,
+                    child: _base64Image == null || _base64Image!.isEmpty ? const Icon(Icons.store, size: 50, color: Colors.grey) : null,
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: InkWell(
+                      onTap: _pickImage,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: const BoxDecoration(color: Color(0xFF10B981), shape: BoxShape.circle),
+                        child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
+                      ),
+                    ),
+                  )
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            TextField(controller: _shopNameController, decoration: InputDecoration(labelText: 'दुकान का नाम', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)))),
+            const SizedBox(height: 16),
+            TextField(controller: _categoryController, decoration: InputDecoration(labelText: 'कैटेगरी (जैसे: सैनिटरी, टाइल्स, पेंट, हार्डवेयर)', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)))),
+            const SizedBox(height: 16),
+            TextField(controller: _addressController, decoration: InputDecoration(labelText: 'दुकान का पता (जैसे: अनंगपुर रोड, फरीदाबाद)', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)))),
+            const SizedBox(height: 30),
+            ElevatedButton(
+              onPressed: _saveShop,
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981), padding: const EdgeInsets.symmetric(vertical: 18), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+              child: const Text('दुकान की जानकारी सेव करें', style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------
+// 7. SHOPKEEPER DASHBOARD (AUTO-CHECK SHOP & VERIFY CODE)
 // ---------------------------------------------------------
 class ShopkeeperDashboardScreen extends StatefulWidget {
   final String shopPhone;
@@ -655,6 +815,31 @@ class ShopkeeperDashboardScreen extends StatefulWidget {
 class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen> {
   final TextEditingController _codeController = TextEditingController();
   final DatabaseReference _dbRef = FirebaseDatabase.instance.ref();
+  Map? _shopData;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkShopExists();
+  }
+
+  void _checkShopExists() async {
+    DataSnapshot snapshot = await _dbRef.child('shops').child(widget.shopPhone).get();
+    if (!snapshot.exists) {
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => RegisterShopScreen(shopPhone: widget.shopPhone)),
+        );
+      }
+    } else {
+      setState(() {
+        _shopData = snapshot.value as Map;
+        _isLoading = false;
+      });
+    }
+  }
 
   void _verifyAndDeductCommission() async {
     String code = _codeController.text.trim();
@@ -710,13 +895,50 @@ class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator(color: Color(0xFF10B981))));
+    }
+
     return Scaffold(
-      appBar: AppBar(title: const Text('दुकानदार डैशबोर्ड (Viziawork Partner)')),
+      appBar: AppBar(
+        title: Text(_shopData?['shop_name'] ?? 'दुकानदार डैशबोर्ड'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit, color: Color(0xFF10B981)),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => RegisterShopScreen(shopPhone: widget.shopPhone, existingData: _shopData)),
+              );
+            },
+          )
+        ],
+      ),
       body: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(color: const Color(0xFF10B981).withOpacity(0.1), borderRadius: BorderRadius.circular(16)),
+              child: Row(
+                children: [
+                  const Icon(Icons.store, color: Color(0xFF10B981), size: 36),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(_shopData?['shop_name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                        Text('${_shopData?['category']} • ${_shopData?['address']}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 30),
             const Text('ग्राहक/मिस्त्री का 4-Digit Code दर्ज करें:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
             TextField(
