@@ -1,4 +1,6 @@
+import 'dart01/convert';
 import 'dart:convert';
+import 'dart:math';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -92,7 +94,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   color: Colors.white,
                   boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.2), blurRadius: 20, spreadRadius: 5)],
                 ),
-                child: const Icon(Icons.flash_on_rounded, size: 50, color: Color(0xFF10B981)),
+                child: const Icon(Icons.build_circle_rounded, size: 50, color: Color(0xFF10B981)),
               ),
               const SizedBox(height: 24),
               const Text(
@@ -102,9 +104,9 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 8),
               const Text(
-                'खुला बाज़ार - डायरेक्ट कारीगर से बात करें',
+                '100% फ्री कारीगर खोजें & मटीरियल बिल पर कैशबैक पाएं',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 15, color: Colors.grey, fontWeight: FontWeight.w500),
+                style: TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.w500),
               ),
               const SizedBox(height: 50),
               TextField(
@@ -113,12 +115,11 @@ class _LoginScreenState extends State<LoginScreen> {
                 style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black),
                 decoration: InputDecoration(
                   labelText: 'मोबाइल नंबर दर्ज करें',
-                  labelStyle: const TextStyle(color: Colors.grey),
                   prefixText: '+91 ',
                   prefixStyle: const TextStyle(fontSize: 18, color: Color(0xFF10B981), fontWeight: FontWeight.bold),
                   filled: true,
                   fillColor: Colors.white,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.shade300)),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
                   enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.shade300)),
                   focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF10B981), width: 2)),
                 ),
@@ -130,7 +131,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   padding: const EdgeInsets.symmetric(vertical: 18),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   backgroundColor: const Color(0xFF10B981),
-                  elevation: 2,
                 ),
                 child: const Text('OTP भेजें', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
               ),
@@ -177,20 +177,18 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('+91 ${widget.phone} पर भेजा गया OTP यहाँ दर्ज करें:', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
+            Text('+91 ${widget.phone} पर भेजा गया OTP दर्ज करें:', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             const SizedBox(height: 20),
             TextField(
               controller: _otpController,
               keyboardType: TextInputType.number,
               maxLength: 4,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 8, color: Colors.black),
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 8),
               decoration: InputDecoration(
                 hintText: '1234',
-                hintStyle: const TextStyle(color: Colors.grey),
                 filled: true,
                 fillColor: Colors.white,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.shade300)),
-                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.shade300)),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
               ),
             ),
             const SizedBox(height: 20),
@@ -211,7 +209,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
 }
 
 // ---------------------------------------------------------
-// 3. ROLE SELECTION SCREEN
+// 3. ROLE SELECTION SCREEN (100% FREE ONBOARDING)
 // ---------------------------------------------------------
 class RoleSelectionScreen extends StatelessWidget {
   final String phone;
@@ -220,44 +218,54 @@ class RoleSelectionScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Viziawork - मुख्य मेनू'),
-        automaticallyImplyLeading: false,
-      ),
+      appBar: AppBar(title: const Text('Viziawork - मुख्य मेनू'), automaticallyImplyLeading: false),
       body: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: const EdgeInsets.all(20.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const Text(
-              'आप ऐप का उपयोग कैसे करना चाहते हैं?',
+              'आप Viziawork का उपयोग कैसे करना चाहते हैं?',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 35),
+            const SizedBox(height: 30),
             _buildRoleCard(
               context,
-              title: 'मुझे काम कराना है / मिस्त्री ढूंढना है',
-              subtitle: 'कुछ भी सर्च करें, ₹10/कॉल कटेगा और ₹100, ₹200, ₹500 का रीचार्ज करें',
-              icon: Icons.search_rounded,
+              title: '1. मुझे काम कराना है / सामान खरीदना है',
+              subtitle: '100% मुफ़्त मिस्त्री खोजें & मटीरियल बिल पर 1% कैशबैक पाएं',
+              icon: Icons.person_search_rounded,
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => CustomerServiceScreen(clientPhone: phone)),
+                  MaterialPageRoute(builder: (context) => HomeScreen(userPhone: phone, isContractor: false)),
                 );
               },
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
             _buildRoleCard(
               context,
-              title: 'मैं कारीगर हूँ (अपनी प्रोफाइल बनाएं)',
-              subtitle: 'प्रोफाइल बनाएं और ₹100, ₹200, ₹500 का सब्सक्रिप्शन रीचार्ज करें',
+              title: '2. मैं कारीगर / ठेकेदार / बिल्डर हूँ',
+              subtitle: 'मुफ़्त रजिस्ट्रेशन करें, नया काम पाएं और 0.5% मटीरियल बोनस कमाएं',
               icon: Icons.engineering_rounded,
               onTap: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => RegisterWorkerScreen(workerPhone: phone)),
+                );
+              },
+            ),
+            const SizedBox(height: 16),
+            _buildRoleCard(
+              context,
+              title: '3. मैं मटीरियल दुकान मालिक हूँ',
+              subtitle: 'अपनी दुकान लिस्ट करें, ग्राहक पाएं & बिल कोड वेरिफाई करें',
+              icon: Icons.storefront_rounded,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => ShopkeeperDashboardScreen(shopPhone: phone)),
                 );
               },
             ),
@@ -276,25 +284,22 @@ class RoleSelectionScreen extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(20),
         child: Padding(
-          padding: const EdgeInsets.all(24.0),
+          padding: const EdgeInsets.all(20.0),
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF10B981).withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(icon, color: const Color(0xFF10B981), size: 32),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(color: const Color(0xFF10B981).withOpacity(0.1), shape: BoxShape.circle),
+                child: Icon(icon, color: const Color(0xFF10B981), size: 30),
               ),
-              const SizedBox(width: 18),
+              const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.black87)),
-                    const SizedBox(height: 6),
-                    Text(subtitle, style: const TextStyle(fontSize: 13, color: Colors.grey, height: 1.3)),
+                    Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 4),
+                    Text(subtitle, style: const TextStyle(fontSize: 12, color: Colors.grey, height: 1.3)),
                   ],
                 ),
               ),
@@ -307,406 +312,262 @@ class RoleSelectionScreen extends StatelessWidget {
   }
 }
 
- // ---------------------------------------------------------
-// 4. PAYMENT HELPERS & UPI DIALOG SYSTEM (CENTRAL + AIRTEL BANK)
 // ---------------------------------------------------------
-class PaymentHelper {
-  static const String centralBankUpi = "9971968060@centralbank";
-  static const String airtelBankUpi = "9971968060@airtel";
-
-  static Future<bool> launchUpi({
-    required BuildContext context,
-    required String upiId,
-    required int amount,
-    required String note,
-  }) async {
-    final String upiUrl = 'upi://pay?pa=$upiId&pn=Viziawork&am=$amount&cu=INR&tn=$note';
-    final Uri uri = Uri.parse(upiUrl);
-
-    try {
-      // canLaunchUrl हटाकर सीधे externalNonBrowserApplication मोड में लॉन्च करें
-      final bool launched = await launchUrl(
-        uri,
-        mode: LaunchMode.externalNonBrowserApplication,
-      );
-      return launched;
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('UPI ऐप खोलने में समस्या आई या कोई ऐप नहीं मिला')),
-        );
-      }
-      return false;
-    }
-  }
-
-  static void showPaymentBottomSheet({
-    required BuildContext context,
-    required Function(int amount) onSuccess,
-    bool isWorkerSubscription = false,
-  }) {
-    int selectedAmount = 100;
-    String selectedUpi = centralBankUpi;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (sheetContext) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    isWorkerSubscription ? 'सब्सक्रिप्शन प्लान लें' : 'वॉलेट रीचार्ज करें',
-                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    isWorkerSubscription
-                        ? 'अपनी प्रोफाइल एक्टिव रखने के लिए प्लान चुनें'
-                        : 'कारीगर को संपर्क करने पर वॉलेट से ₹10 काटेंगे',
-                    style: const TextStyle(fontSize: 13, color: Colors.grey),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 20),
-
-                  const Text('1. प्लान / अमाउंट चुनें:', style: TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 10),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [100, 200, 500].map((amt) {
-                      bool isSelected = selectedAmount == amt;
-                      return ChoiceChip(
-                        label: Text('₹$amt', style: TextStyle(color: isSelected ? Colors.white : Colors.black, fontWeight: FontWeight.bold)),
-                        selected: isSelected,
-                        selectedColor: const Color(0xFF10B981),
-                        backgroundColor: Colors.grey.shade200,
-                        onSelected: (val) {
-                          if (val) setModalState(() => selectedAmount = amt);
-                        },
-                      );
-                    }).toList(),
-                  ),
-
-                  const SizedBox(height: 20),
-                  const Text('2. बैंक UPI विकल्प चुनें:', style: TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 10),
-
-                  Container(
-                    decoration: BoxDecoration(
-                      border: Border.all(color: selectedUpi == centralBankUpi ? const Color(0xFF10B981) : Colors.grey.shade300, width: 2),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: RadioListTile<String>(
-                      title: const Text('Central Bank of India', style: TextStyle(fontWeight: FontWeight.bold)),
-                      subtitle: Text(centralBankUpi, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                      value: centralBankUpi,
-                      groupValue: selectedUpi,
-                      activeColor: const Color(0xFF10B981),
-                      onChanged: (val) => setModalState(() => selectedUpi = val!),
-                    ),
-                  ),
-
-                  const SizedBox(height: 10),
-
-                  Container(
-                    decoration: BoxDecoration(
-                      border: Border.all(color: selectedUpi == airtelBankUpi ? const Color(0xFF10B981) : Colors.grey.shade300, width: 2),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: RadioListTile<String>(
-                      title: const Text('Airtel Payments Bank', style: TextStyle(fontWeight: FontWeight.bold)),
-                      subtitle: Text(airtelBankUpi, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                      value: airtelBankUpi,
-                      groupValue: selectedUpi,
-                      activeColor: const Color(0xFF10B981),
-                      onChanged: (val) => setModalState(() => selectedUpi = val!),
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF10B981),
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    ),
-                    onPressed: () async {
-                      Navigator.pop(sheetContext);
-                      bool ok = await launchUpi(
-                        context: context,
-                        upiId: selectedUpi,
-                        amount: selectedAmount,
-                        note: isWorkerSubscription ? 'Worker_Subscription' : 'Client_Wallet_Recharge',
-                      );
-                      if (ok) {
-                        onSuccess(selectedAmount);
-                      }
-                    },
-                    child: Text('₹$selectedAmount भुगतान करें', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-}
-               
-                    
+// 4. MAIN HOME SCREEN (KOTI / MISTRY & SHOP MARKETPLACE)
 // ---------------------------------------------------------
-// 5. CUSTOMER SERVICE SCREEN (₹10 कटने का पूरा लॉजिक)
-// ---------------------------------------------------------
-class CustomerServiceScreen extends StatefulWidget {
-  final String clientPhone;
+class HomeScreen extends StatefulWidget {
+  final String userPhone;
+  final bool isContractor;
 
-  const CustomerServiceScreen({super.key, required this.clientPhone});
+  const HomeScreen({super.key, required this.userPhone, required this.isContractor});
 
   @override
-  State<CustomerServiceScreen> createState() => _CustomerServiceScreenState();
+  State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _CustomerServiceScreenState extends State<CustomerServiceScreen> {
-  String _searchQuery = '';
-  final TextEditingController _searchController = TextEditingController();
-  int _displayLimit = 15;
+class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
   int _walletBalance = 0;
-
-  final ScrollController _scrollController = ScrollController();
-  final DatabaseReference _workersRef = FirebaseDatabase.instance.ref().child('public_workers');
-  late DatabaseReference _clientRef;
+  final DatabaseReference _userRef = FirebaseDatabase.instance.ref();
 
   @override
   void initState() {
     super.initState();
-    _clientRef = FirebaseDatabase.instance.ref().child('clients').child(widget.clientPhone);
-    _loadWalletBalance();
-
-    _scrollController.addListener(() {
-      if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
-        setState(() {
-          _displayLimit += 15;
-        });
-      }
-    });
+    _tabController = TabController(length: 2, vsync: this);
+    _loadWallet();
   }
 
-  void _loadWalletBalance() {
-    _clientRef.child('wallet_balance').onValue.listen((event) {
+  void _loadWallet() {
+    _userRef.child('users').child(widget.userPhone).child('wallet_balance').onValue.listen((event) {
       if (event.snapshot.value != null) {
         setState(() {
           _walletBalance = (event.snapshot.value as num).toInt();
         });
-      } else {
-        _clientRef.set({'wallet_balance': 0});
       }
     });
   }
 
-  void _openRechargeSheet() {
-    PaymentHelper.showPaymentBottomSheet(
-      context: context,
-      isWorkerSubscription: false,
-      onSuccess: (amt) async {
-        await _clientRef.update({'wallet_balance': _walletBalance + amt});
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('₹$amt सफ़लतापूर्वक रीचार्ज हुए!')));
-        }
-      },
-    );
-  }
+  void _showGenerateCodeDialog() {
+    final TextEditingController amountController = TextEditingController();
+    final TextEditingController mistryPhoneController = TextEditingController();
 
-  Future<void> _handleContactAction(String phone, String type) async {
-    if (_walletBalance < 10) {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('बैलेंस कम है!'),
-          content: const Text('कारीगर से बात करने के लिए वॉलेट में कम से कम ₹10 होना आवश्यक है।'),
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text('4-Digit Bill Code बनाएं', style: TextStyle(fontWeight: FontWeight.bold)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('दुकान पर बिल बनने पर कोड बनाएं और 1% कैशबैक पाएं!'),
+              const SizedBox(height: 16),
+              TextField(
+                controller: amountController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: 'अनुमानित बिल राशि (₹)',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+              const SizedBox(height: 12),
+              if (!widget.isContractor)
+                TextField(
+                  controller: mistryPhoneController,
+                  keyboardType: TextInputType.phone,
+                  decoration: InputDecoration(
+                    labelText: 'मिस्त्री/ठेकेदार का नंबर (वैकल्पिक)',
+                    hintText: '0.5% बोनस दिलाने के लिए भरें',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+            ],
+          ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(context), child: const Text('रद्द करें')),
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981)),
-              onPressed: () {
-                Navigator.pop(context);
-                _openRechargeSheet();
+              onPressed: () async {
+                if (amountController.text.isEmpty) return;
+                int amount = int.parse(amountController.text.trim());
+                String code = (1000 + Random().nextInt(9000)).toString();
+
+                await _userRef.child('pending_codes').child(code).set({
+                  'code': code,
+                  'userPhone': widget.userPhone,
+                  'mistryPhone': mistryPhoneController.text.trim(),
+                  'amount': amount,
+                  'status': 'PENDING',
+                  'createdAt': ServerValue.timestamp,
+                });
+
+                if (mounted) {
+                  Navigator.pop(context);
+                  _showCodeResultDialog(code, amount);
+                }
               },
-              child: const Text('रीचार्ज करें', style: TextStyle(color: Colors.white)),
+              child: const Text('कोड जनरेट करें', style: TextStyle(color: Colors.white)),
             ),
           ],
-        ),
-      );
-      return;
-    }
-
-    await _clientRef.update({'wallet_balance': _walletBalance - 10});
-
-    if (type == 'call') {
-      launchUrl(Uri.parse('tel:$phone'));
-    } else {
-      launchUrl(Uri.parse('whatsapp://send?phone=+91$phone&text=नमस्ते, मुझे आपके काम की जरूरत है।'));
-    }
+        );
+      },
+    );
   }
 
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    _searchController.dispose();
-    super.dispose();
+  void _showCodeResultDialog(String code, int amount) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('आपका बिल कोड', textAlign: TextAlign.center),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(code, style: const TextStyle(fontSize: 42, fontWeight: FontWeight.w900, color: Color(0xFF10B981), letterSpacing: 6)),
+            const SizedBox(height: 10),
+            Text('बिल राशि: ₹$amount', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const SizedBox(height: 10),
+            const Text('यह 4-डिजिट कोड दुकानदार को बताएं। दुकानदार कोड एंटर करके बिल पक्का करेगा।', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: Colors.grey)),
+          ],
+        ),
+        actions: [
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981)),
+            onPressed: () => Navigator.pop(context),
+            child: const Text('ठीक है', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('कारीगर खोजें'),
+        title: const Text('Viziawork'),
         actions: [
           Container(
             margin: const EdgeInsets.only(right: 16),
-            child: ActionChip(
+            child: Chip(
               backgroundColor: const Color(0xFF10B981).withOpacity(0.15),
               avatar: const Icon(Icons.account_balance_wallet, size: 18, color: Color(0xFF10B981)),
-              label: Text('₹$_walletBalance', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF10B981))),
-              onPressed: _openRechargeSheet,
+              label: Text('कैशबैक: ₹$_walletBalance', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF10B981))),
             ),
           ),
         ],
+        bottom: TabBar(
+          controller: _tabController,
+          labelColor: const Color(0xFF10B981),
+          unselectedLabelColor: Colors.grey,
+          indicatorColor: const Color(0xFF10B981),
+          tabs: const [
+            Tab(icon: Icon(Icons.engineering), text: 'कारीगर व ठेकेदार'),
+            Tab(icon: Icon(Icons.storefront), text: 'मटीरियल दुकानें'),
+          ],
+        ),
       ),
-      body: Column(
+      body: TabBarView(
+        controller: _tabController,
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: TextField(
-              controller: _searchController,
-              onChanged: (val) {
-                setState(() {
-                  _searchQuery = val.toLowerCase().trim();
-                });
-              },
-              style: const TextStyle(color: Colors.black, fontSize: 16),
-              decoration: InputDecoration(
-                hintText: 'क्या काम चाहिए? (जैसे: प्लंबर, मिस्त्री, कारपेंटर)...',
-                hintStyle: const TextStyle(color: Colors.grey, fontSize: 14),
-                prefixIcon: const Icon(Icons.search, color: Color(0xFF10B981)),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear, color: Colors.grey),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() {
-                            _searchQuery = '';
-                          });
-                        },
-                      )
-                    : null,
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.shade300)),
-                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.shade300)),
-              ),
-            ),
-          ),
-          const Divider(color: Colors.grey, height: 1),
-          Expanded(
-            child: FirebaseAnimatedList(
-              query: _workersRef.limitToFirst(_displayLimit),
-              controller: _scrollController,
-              itemBuilder: (context, snapshot, animation, index) {
-                if (snapshot.value == null) return Container();
-                Map workerData = snapshot.value as Map;
-                String name = workerData['name'] ?? 'नाम उपलब्ध नहीं';
-                String skill = workerData['skill'] ?? 'हुनर अज्ञात';
-                String phone = workerData['phone'] ?? '';
-                String address = workerData['address'] ?? '';
-                String profileImg = workerData['profileImage'] ?? '';
-
-                bool matchesSearch = _searchQuery.isEmpty || 
-                    name.toLowerCase().contains(_searchQuery) || 
-                    skill.toLowerCase().contains(_searchQuery);
-
-                if (!matchesSearch) return Container();
-
-                return Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.grey.shade200),
-                    boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.08), blurRadius: 8, spreadRadius: 2)],
-                  ),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 28,
-                        backgroundColor: Colors.grey.shade200,
-                        backgroundImage: profileImg.isNotEmpty ? MemoryImage(base64Decode(profileImg)) : null,
-                        child: profileImg.isEmpty ? const Icon(Icons.person, size: 28, color: Colors.grey) : null,
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(name, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.black87)),
-                            const SizedBox(height: 4),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                              decoration: BoxDecoration(color: const Color(0xFF10B981).withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
-                              child: Text(skill, style: const TextStyle(color: Color(0xFF10B981), fontSize: 12, fontWeight: FontWeight.w600)),
-                            ),
-                            const SizedBox(height: 6),
-                            if (address.isNotEmpty)
-                              Text('पता: $address', style: const TextStyle(color: Colors.black54, fontSize: 12)),
-                            const SizedBox(height: 2),
-                            const Text('संपर्क करने पर ₹10 कटेगा', style: TextStyle(color: Colors.grey, fontSize: 11, fontStyle: FontStyle.italic)),
-                          ],
-                        ),
-                      ),
-                      Column(
-                        children: [
-                          IconButton(
-                            onPressed: () => _handleContactAction(phone, 'call'),
-                            icon: const CircleAvatar(
-                              radius: 20,
-                              backgroundColor: Color(0xFF10B981),
-                              child: Icon(Icons.call, color: Colors.white, size: 18),
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          IconButton(
-                            onPressed: () => _handleContactAction(phone, 'whatsapp'),
-                            icon: const CircleAvatar(
-                              radius: 20,
-                              backgroundColor: Colors.green,
-                              child: Icon(Icons.chat, color: Colors.white, size: 18),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ),
+          _buildWorkersList(),
+          _buildShopsList(),
         ],
       ),
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.all(16),
+        color: Colors.white,
+        child: ElevatedButton.icon(
+          onPressed: _showGenerateCodeDialog,
+          icon: const Icon(Icons.qr_code_2, color: Colors.white),
+          label: const Text('दुकान बिल कोड (Dynamic 4-Digit Code) बनाएं', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF10B981),
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWorkersList() {
+    DatabaseReference workersRef = FirebaseDatabase.instance.ref().child('public_workers');
+    return FirebaseAnimatedList(
+      query: workersRef,
+      itemBuilder: (context, snapshot, animation, index) {
+        if (snapshot.value == null) return Container();
+        Map worker = snapshot.value as Map;
+        return Card(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: ListTile(
+            leading: CircleAvatar(
+              backgroundColor: const Color(0xFF10B981).withOpacity(0.2),
+              child: const Icon(Icons.person, color: Color(0xFF10B981)),
+            ),
+            title: Text(worker['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
+            subtitle: Text('${worker['skill']} • ${worker['address']}'),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.call, color: Colors.green),
+                  onPressed: () => launchUrl(Uri.parse('tel:${worker['phone']}')),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.chat, color: Colors.teal),
+                  onPressed: () => launchUrl(Uri.parse('whatsapp://send?phone=+91${worker['phone']}')),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildShopsList() {
+    DatabaseReference shopsRef = FirebaseDatabase.instance.ref().child('shops');
+    return FirebaseAnimatedList(
+      query: shopsRef,
+      itemBuilder: (context, snapshot, animation, index) {
+        if (snapshot.value == null) return Container();
+        Map shop = snapshot.value as Map;
+        String tier = shop['subscription_tier'] ?? 'FREE';
+
+        return Card(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: ListTile(
+            leading: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(color: Colors.orange.withOpacity(0.1), shape: BoxShape.circle),
+              child: const Icon(Icons.store, color: Colors.orange),
+            ),
+            title: Row(
+              children: [
+                Text(shop['shop_name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(width: 8),
+                if (tier == 'GOLD')
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(color: Colors.amber, borderRadius: BorderRadius.circular(6)),
+                    child: const Text('GOLD', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.black)),
+                  ),
+              ],
+            ),
+            subtitle: Text('${shop['category']} • ${shop['address']}'),
+            trailing: const Icon(Icons.verified, color: Color(0xFF10B981)),
+          ),
+        );
+      },
     );
   }
 }
 
 // ---------------------------------------------------------
-// 6. REGISTER WORKER SCREEN (सब्सक्रिप्शन प्लान चयन)
+// 5. REGISTER WORKER / CONTRACTOR (100% FREE)
 // ---------------------------------------------------------
 class RegisterWorkerScreen extends StatefulWidget {
   final String workerPhone;
@@ -718,174 +579,161 @@ class RegisterWorkerScreen extends StatefulWidget {
 
 class _RegisterWorkerScreenState extends State<RegisterWorkerScreen> {
   final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _skillController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
-  
-  String? _base64Image;
-  bool _isUploading = false;
+  bool _isContractor = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _phoneController.text = widget.workerPhone;
-  }
-
-  Future<void> _pickImage() async {
-    final ImagePicker picker = ImagePicker();
-    final XFile? image = await picker.pickImage(source: ImageSource.gallery, imageQuality: 50);
-    if (image != null) {
-      Uint8List bytes = await image.readAsBytes();
-      setState(() {
-        _base64Image = base64Encode(bytes);
-      });
-    }
-  }
-
-  void _startRegistrationWithSubscription() {
-    String name = _nameController.text.trim();
-    String phone = _phoneController.text.trim();
-    String skill = _skillController.text.trim();
-    String address = _addressController.text.trim();
-
-    if (name.isEmpty || phone.length < 10 || skill.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('कृपया नाम, सही फोन नंबर और हुनर भरें')),
-      );
+  void _register() async {
+    if (_nameController.text.isEmpty || _skillController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('कृपया नाम और हुनर भरें')));
       return;
     }
 
-    PaymentHelper.showPaymentBottomSheet(
-      context: context,
-      isWorkerSubscription: true,
-      onSuccess: (paidAmount) async {
-        setState(() {
-          _isUploading = true;
-        });
+    DatabaseReference ref = FirebaseDatabase.instance.ref().child('public_workers').child(widget.workerPhone);
+    await ref.set({
+      'name': _nameController.text.trim(),
+      'phone': widget.workerPhone,
+      'skill': _skillController.text.trim(),
+      'address': _addressController.text.trim(),
+      'isContractor': _isContractor,
+      'createdAt': ServerValue.timestamp,
+    });
 
-        try {
-          DatabaseReference ref = FirebaseDatabase.instance.ref().child('public_workers').child(phone);
-          await ref.set({
-            'name': name,
-            'phone': phone,
-            'skill': skill,
-            'address': address,
-            'profileImage': _base64Image ?? '',
-            'subscriptionBalance': paidAmount,
-            'createdAt': ServerValue.timestamp,
-          });
-
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('बधाई हो! आपकी प्रोफाइल लाइव हो गई है')),
-          );
-          Navigator.pop(context);
-        } catch (e) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('त्रुटि: $e')),
-            );
-          }
-        } finally {
-          if (mounted) {
-            setState(() {
-              _isUploading = false;
-            });
-          }
-        }
-      },
-    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('प्रोफाइल मुफ़्त में लाइव हो गई!')));
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => HomeScreen(userPhone: widget.workerPhone, isContractor: true)),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('कारीगर रजिस्ट्रेशन')),
-      body: SingleChildScrollView(
+      appBar: AppBar(title: const Text('कारीगर / ठेकेदार मुफ़्त रजिस्ट्रेशन')),
+      body: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Center(
-              child: Stack(
-                children: [
-                  CircleAvatar(
-                    radius: 50,
-                    backgroundColor: Colors.grey.shade200,
-                    backgroundImage: _base64Image != null ? MemoryImage(base64Decode(_base64Image!)) : null,
-                    child: _base64Image == null ? const Icon(Icons.person, size: 50, color: Colors.grey) : null,
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: InkWell(
-                      onTap: _pickImage,
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF10B981),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+            TextField(controller: _nameController, decoration: InputDecoration(labelText: 'पूरा नाम', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)))),
+            const SizedBox(height: 16),
+            TextField(controller: _skillController, decoration: InputDecoration(labelText: 'हुनर (जैसे: टाइल्स मिस्त्री, पेंटर, ठेकेदार)', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)))),
+            const SizedBox(height: 16),
+            TextField(controller: _addressController, decoration: InputDecoration(labelText: 'पता / एरिया (जैसे: शीतला माता मंदिर रोड, फरीदाबाद)', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)))),
+            const SizedBox(height: 16),
+            CheckboxListTile(
+              title: const Text('मैं ठेकेदार/बिल्डर हूँ (बल्क काम लेता हूँ)'),
+              value: _isContractor,
+              onChanged: (val) => setState(() => _isContractor = val!),
             ),
             const SizedBox(height: 24),
-            TextField(
-              controller: _nameController,
-              decoration: InputDecoration(
-                labelText: 'पूरा नाम',
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _phoneController,
-              keyboardType: TextInputType.phone,
-              decoration: InputDecoration(
-                labelText: 'मोबाइल नंबर',
-                prefixText: '+91 ',
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _skillController,
-              decoration: InputDecoration(
-                labelText: 'अपना हुनर (जैसे: एसी रिपेयर, प्लंबर, राजमिस्त्री)',
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _addressController,
-              decoration: InputDecoration(
-                labelText: 'पता / एरिया (जैसे: सेक्टर 15, फरीदाबाद)',
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-              ),
-            ),
-            const SizedBox(height: 30),
             ElevatedButton(
-              onPressed: _isUploading ? null : _startRegistrationWithSubscription,
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 18),
-                backgroundColor: const Color(0xFF10B981),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              onPressed: _register,
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981), padding: const EdgeInsets.symmetric(vertical: 18), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+              child: const Text('मुफ़्त प्रोफाइल लाइव करें', style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------
+// 6. SHOPKEEPER DASHBOARD (CODE VERIFICATION & 3% COMMISSION)
+// ---------------------------------------------------------
+class ShopkeeperDashboardScreen extends StatefulWidget {
+  final String shopPhone;
+  const ShopkeeperDashboardScreen({super.key, required this.shopPhone});
+
+  @override
+  State<ShopkeeperDashboardScreen> createState() => _ShopkeeperDashboardScreenState();
+}
+
+class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen> {
+  final TextEditingController _codeController = TextEditingController();
+  final DatabaseReference _dbRef = FirebaseDatabase.instance.ref();
+
+  void _verifyAndDeductCommission() async {
+    String code = _codeController.text.trim();
+    if (code.length < 4) return;
+
+    DataSnapshot snapshot = await _dbRef.child('pending_codes').child(code).get();
+    if (!snapshot.exists) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('अमान्य कोड! दोबारा जाँचें')));
+      return;
+    }
+
+    Map data = snapshot.value as Map;
+    int amount = data['amount'];
+    String userPhone = data['userPhone'];
+    String mistryPhone = data['mistryPhone'] ?? '';
+
+    // 3% Commission Breakdown
+    double viziaCut = amount * 0.02; // 2% Net Profit
+    double customerCashback = mistryPhone.isEmpty ? (amount * 0.01) : (amount * 0.005); // 1% or 0.5%
+    double mistryBonus = mistryPhone.isNotEmpty ? (amount * 0.005) : 0.0; // 0.5%
+
+    // Update Customer Wallet
+    await _dbRef.child('users').child(userPhone).child('wallet_balance').set(ServerValue.increment(customerCashback.toInt()));
+
+    // Update Mistry Wallet if exists
+    if (mistryPhone.isNotEmpty) {
+      await _dbRef.child('users').child(mistryPhone).child('wallet_balance').set(ServerValue.increment(mistryBonus.toInt()));
+    }
+
+    // Record Viziawork Commission
+    await _dbRef.child('viziawork_earnings').push().set({
+      'shopPhone': widget.shopPhone,
+      'billAmount': amount,
+      'viziaNetProfit': viziaCut,
+      'createdAt': ServerValue.timestamp,
+    });
+
+    // Delete Code
+    await _dbRef.child('pending_codes').child(code).remove();
+
+    if (mounted) {
+      _codeController.clear();
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('बिल कोड वेरिफाई हो गया!'),
+          content: Text('कुल बिल: ₹$amount\nकस्टमर कैशबैक: ₹${customerCashback.toInt()}\nमिस्त्री बोनस: ₹${mistryBonus.toInt()}'),
+          actions: [ElevatedButton(onPressed: () => Navigator.pop(context), child: const Text('ठीक है'))],
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('दुकानदार डैशबोर्ड (Viziawork Partner)')),
+      body: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text('ग्राहक/मिस्त्री का 4-Digit Code दर्ज करें:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _codeController,
+              keyboardType: TextInputType.number,
+              maxLength: 4,
+              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, letterSpacing: 10),
+              decoration: InputDecoration(
+                hintText: '6842',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
               ),
-              child: _isUploading
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text('सब्सक्रिप्शन चुनें और प्रोफाइल लाइव करें', style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: _verifyAndDeductCommission,
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981), padding: const EdgeInsets.symmetric(vertical: 18), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+              child: const Text('बिल वेरिफाई करें & कैशबैक ट्रांसफर करें', style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold)),
             ),
           ],
         ),
