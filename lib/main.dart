@@ -889,9 +889,8 @@ class _RegisterShopScreenState extends State<RegisterShopScreen> {
     );
   }
 }
-
 // =========================================================
-// 2. SHOPKEEPER DASHBOARD (AUTO-RANKING + TODAY/TOTAL LEDGER)
+// BRANDED SHOPKEEPER DASHBOARD (LEDGER + BANNER + GALLERY ONLY)
 // =========================================================
 class ShopkeeperDashboardScreen extends StatefulWidget {
   final String shopPhone;
@@ -902,7 +901,6 @@ class ShopkeeperDashboardScreen extends StatefulWidget {
 }
 
 class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen> {
-  final TextEditingController _codeController = TextEditingController();
   final DatabaseReference _dbRef = FirebaseDatabase.instance.ref();
   Map? _shopData;
   bool _isLoading = true;
@@ -934,7 +932,7 @@ class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen> {
     }
   }
 
-  // आज के बिलों और बिक्री का लेजर निकालना
+  // आज के बिल और सेल्स का लाइव लेजर
   void _fetchTodayLedger() {
     DateTime now = DateTime.now();
     String todayKey = "${now.year}-${now.month}-${now.day}";
@@ -962,76 +960,6 @@ class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen> {
     });
   }
 
-  void _verifyAndDeductCommission() async {
-    String code = _codeController.text.trim();
-    if (code.length < 4) return;
-
-    DataSnapshot snapshot = await _dbRef.child('pending_codes').child(code).get();
-    if (!snapshot.exists) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('अमान्य कोड! दोबारा जाँचें')));
-      return;
-    }
-
-    Map data = snapshot.value as Map;
-    int amount = data['amount'];
-    String userPhone = data['userPhone'];
-    String mistryPhone = data['mistryPhone'] ?? '';
-
-    // 3% कमिशन ब्रेकडाउन
-    double viziaCut = amount * 0.02; // 2% Viziawork Net Profit
-    double customerCashback = mistryPhone.isEmpty ? (amount * 0.01) : (amount * 0.005); // 1% या 0.5%
-    double mistryBonus = mistryPhone.isNotEmpty ? (amount * 0.005) : 0.0; // 0.5% मिस्त्री
-
-    // 1. कस्टमर वॉलेट अपडेट
-    await _dbRef.child('users').child(userPhone).child('wallet_balance').set(ServerValue.increment(customerCashback.toInt()));
-
-    // 2. मिस्त्री वॉलेट अपडेट
-    if (mistryPhone.isNotEmpty) {
-      await _dbRef.child('users').child(mistryPhone).child('wallet_balance').set(ServerValue.increment(mistryBonus.toInt()));
-    }
-
-    // 3. Viziawork कमिशन रिकॉर्ड
-    await _dbRef.child('viziawork_earnings').push().set({
-      'shopPhone': widget.shopPhone,
-      'billAmount': amount,
-      'viziaNetProfit': viziaCut,
-      'createdAt': ServerValue.timestamp,
-    });
-
-    // 4. दुकान के कुल बिल और टोटल सेल्स इंक्रीमेंट (रैंकिंग के लिए)
-    await _dbRef.child('shops').child(widget.shopPhone).update({
-      'totalPassedBills': ServerValue.increment(1),
-      'totalSalesAmount': ServerValue.increment(amount),
-    });
-
-    // 5. डेली लेजर रिकॉर्ड सेव करें
-    DateTime now = DateTime.now();
-    String todayKey = "${now.year}-${now.month}-${now.day}";
-    await _dbRef.child('passed_bills').push().set({
-      'shopPhone': widget.shopPhone,
-      'userPhone': userPhone,
-      'amount': amount,
-      'dateKey': todayKey,
-      'createdAt': ServerValue.timestamp,
-    });
-
-    // 6. पेंडिंग कोड डिलीट करें
-    await _dbRef.child('pending_codes').child(code).remove();
-
-    if (mounted) {
-      _codeController.clear();
-      _checkShopExists(); // रिफ्रेश
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('बिल कोड वेरिफाई हो गया!'),
-          content: Text('कुल बिल: ₹$amount\nकस्टमर कैशबैक: ₹${customerCashback.toInt()}\nमिस्त्री बोनस: ₹${mistryBonus.toInt()}\n\nआपकी दुकान का रैंकिंग काउंट अपडेट हो गया है!'),
-          actions: [ElevatedButton(onPressed: () => Navigator.pop(context), child: const Text('ठीक है'))],
-        ),
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -1040,6 +968,9 @@ class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen> {
 
     int totalBills = _shopData?['totalPassedBills'] ?? 0;
     int totalSales = _shopData?['totalSalesAmount'] ?? 0;
+    String mainImage = _shopData?['shopImage'] ?? '';
+    List galleryImages = _shopData?['galleryImages'] ?? [];
+    String customOffer = _shopData?['custom_offer'] ?? '';
 
     return Scaffold(
       appBar: AppBar(
@@ -1057,97 +988,129 @@ class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen> {
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 📊 1. रैंकिंग और आज का लेजर बोर्ड
+            // 1. बड़ा मुख्य शॉप बैनर फोटो
             Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: const Color(0xFF0F172A), borderRadius: BorderRadius.circular(16)),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('🏆 पास हुए बिल (रैंकिंग काउंट)', style: TextStyle(color: Colors.amber, fontSize: 13, fontWeight: FontWeight.bold)),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(color: Colors.amber, borderRadius: BorderRadius.circular(12)),
-                        child: Text('$totalBills बिल पास', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black)),
-                      )
-                    ],
-                  ),
-                  const Divider(color: Colors.white24, height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('आज का बिजनेस', style: TextStyle(color: Colors.grey, fontSize: 11)),
-                          Text('₹$_todaySales', style: const TextStyle(color: Colors.greenAccent, fontSize: 18, fontWeight: FontWeight.bold)),
-                          Text('($_todayBills बिल आज)', style: const TextStyle(color: Colors.white54, fontSize: 10)),
-                        ],
-                      ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          const Text('कुल लाइफटाइम बिजनेस', style: TextStyle(color: Colors.grey, fontSize: 11)),
-                          Text('₹$totalSales', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                        ],
-                      ),
-                    ],
-                  )
-                ],
-              ),
+              height: 180,
+              width: double.infinity,
+              color: Colors.grey.shade300,
+              child: mainImage.isNotEmpty
+                  ? Image.memory(base64Decode(mainImage), fit: BoxFit.cover)
+                  : const Icon(Icons.store, size: 70, color: Colors.grey),
             ),
-            const SizedBox(height: 24),
 
-            // 2. दुकान प्रोफाइल प्रिव्यू कार्ड
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: const Color(0xFF10B981).withOpacity(0.1), borderRadius: BorderRadius.circular(16)),
-              child: Row(
+            Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Icon(Icons.store, color: Color(0xFF10B981), size: 36),
-                  const SizedBox(width: 12),
-                  Expanded(
+                  // 2. दुकान का नाम, कैटेगरी और पता
+                  Text(_shopData?['shop_name'] ?? '', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
+                  Text('${_shopData?['category']} • ${_shopData?['address']}', style: TextStyle(fontSize: 14, color: Colors.grey.shade700)),
+                  
+                  // दुकानदार का स्पेशल डिस्काउंट ऑफर कार्ड
+                  if (customOffer.isNotEmpty) ...[
+                    const SizedBox(height: 14),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.shade100,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.amber.shade700),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.local_offer, color: Colors.amber, size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              customOffer,
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  // 3. दुकान की 5 फोटो की गैलरी पट्टी
+                  if (galleryImages.isNotEmpty) ...[
+                    const SizedBox(height: 18),
+                    const Text('दुकान/स्टॉक की गैलरी फोटो:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black54)),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: 80,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: galleryImages.length,
+                        itemBuilder: (context, index) {
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8.0),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(10),
+                              child: Image.memory(
+                                base64Decode(galleryImages[index]),
+                                width: 80,
+                                height: 80,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+
+                  const SizedBox(height: 24),
+
+                  // 📊 4. रैंकिंग और सेल्स लेजर बोर्ड
+                  Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(color: const Color(0xFF0F172A), borderRadius: BorderRadius.circular(16)),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(_shopData?['shop_name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                        Text('${_shopData?['category']} • ${_shopData?['address']}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                        if (_shopData?['custom_offer'] != null && _shopData!['custom_offer'].toString().isNotEmpty) ...[
-                          const SizedBox(height: 4),
-                          Text('🏷️ ${_shopData!['custom_offer']}', style: const TextStyle(fontSize: 11, color: Colors.orange, fontWeight: FontWeight.bold)),
-                        ]
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('🏆 पास हुए कुल बिल (रैंकिंग काउंट)', style: TextStyle(color: Colors.amber, fontSize: 13, fontWeight: FontWeight.bold)),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(color: Colors.amber, borderRadius: BorderRadius.circular(12)),
+                              child: Text('$totalBills बिल पास', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black)),
+                            )
+                          ],
+                        ),
+                        const Divider(color: Colors.white24, height: 24),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('आज का बिजनेस', style: TextStyle(color: Colors.grey, fontSize: 11)),
+                                const SizedBox(height: 2),
+                                Text('₹$_todaySales', style: const TextStyle(color: Colors.greenAccent, fontSize: 20, fontWeight: FontWeight.bold)),
+                                Text('($_todayBills बिल आज)', style: const TextStyle(color: Colors.white54, fontSize: 10)),
+                              ],
+                            ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                const Text('कुल लाइफटाइम बिजनेस', style: TextStyle(color: Colors.grey, fontSize: 11)),
+                                const SizedBox(height: 2),
+                                Text('₹$totalSales', style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+                          ],
+                        )
                       ],
                     ),
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: 24),
-
-            // 3. कोड दर्ज करने का बॉक्स
-            const Text('ग्राहक/मिस्त्री का 4-Digit Code दर्ज करें:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _codeController,
-              keyboardType: TextInputType.number,
-              maxLength: 4,
-              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, letterSpacing: 10),
-              decoration: InputDecoration(
-                hintText: '6842',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-              ),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _verifyAndDeductCommission,
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981), padding: const EdgeInsets.symmetric(vertical: 18), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-              child: const Text('बिल वेरिफाई करें & कैशबैक ट्रांसफर करें', style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold)),
             ),
           ],
         ),
@@ -1156,4 +1119,5 @@ class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen> {
   }
 }
 
-                                        
+    
+                  
