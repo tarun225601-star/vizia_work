@@ -681,10 +681,9 @@ class _RegisterWorkerScreenState extends State<RegisterWorkerScreen> {
     );
   }
 }
-
-// ---------------------------------------------------------
-// 6. SHOPKEEPER REGISTER / EDIT FORM
-// ---------------------------------------------------------
+// =========================================================
+// 1. SHOPKEEPER REGISTER / EDIT FORM (BRANDED + 5 PHOTOS + CUSTOM OFFER BOX)
+// =========================================================
 class RegisterShopScreen extends StatefulWidget {
   final String shopPhone;
   final Map? existingData;
@@ -699,7 +698,10 @@ class _RegisterShopScreenState extends State<RegisterShopScreen> {
   final TextEditingController _shopNameController = TextEditingController();
   final TextEditingController _categoryController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
-  String? _base64Image;
+  final TextEditingController _offerController = TextEditingController(); // कस्टम ऑफर/एड बॉक्स
+
+  String? _mainBase64Image;
+  List<String> _galleryBase64Images = []; // 5 फोटो तक गैलरी
 
   @override
   void initState() {
@@ -708,17 +710,40 @@ class _RegisterShopScreenState extends State<RegisterShopScreen> {
       _shopNameController.text = widget.existingData!['shop_name'] ?? '';
       _categoryController.text = widget.existingData!['category'] ?? '';
       _addressController.text = widget.existingData!['address'] ?? '';
-      _base64Image = widget.existingData!['shopImage'] ?? '';
+      _offerController.text = widget.existingData!['custom_offer'] ?? '';
+      _mainBase64Image = widget.existingData!['shopImage'] ?? '';
+      
+      if (widget.existingData!['galleryImages'] != null) {
+        _galleryBase64Images = List<String>.from(widget.existingData!['galleryImages']);
+      }
     }
   }
 
-  Future<void> _pickImage() async {
+  // प्रोफाइल फोटो
+  Future<void> _pickMainImage() async {
     final ImagePicker picker = ImagePicker();
     final XFile? image = await picker.pickImage(source: ImageSource.gallery, imageQuality: 40);
     if (image != null) {
       Uint8List bytes = await image.readAsBytes();
       setState(() {
-        _base64Image = base64Encode(bytes);
+        _mainBase64Image = base64Encode(bytes);
+      });
+    }
+  }
+
+  // 5 फोटो तक गैलरी पिकर
+  Future<void> _pickGalleryImages() async {
+    final ImagePicker picker = ImagePicker();
+    final List<XFile> images = await picker.pickMultiImage(imageQuality: 35);
+    if (images.isNotEmpty) {
+      List<String> tempImages = [];
+      for (var img in images) {
+        Uint8List bytes = await img.readAsBytes();
+        tempImages.add(base64Encode(bytes));
+        if (tempImages.length == 5) break; // मैक्सिमम 5 फोटो
+      }
+      setState(() {
+        _galleryBase64Images = tempImages;
       });
     }
   }
@@ -730,18 +755,27 @@ class _RegisterShopScreenState extends State<RegisterShopScreen> {
     }
 
     DatabaseReference ref = FirebaseDatabase.instance.ref().child('shops').child(widget.shopPhone);
-    await ref.set({
+    
+    // पुराने बिल काउंट सुरक्षित रखें
+    int totalPassedBills = widget.existingData?['totalPassedBills'] ?? 0;
+    int totalSalesAmount = widget.existingData?['totalSalesAmount'] ?? 0;
+
+    await ref.update({
       'shop_name': _shopNameController.text.trim(),
       'phone': widget.shopPhone,
       'category': _categoryController.text.trim(),
       'address': _addressController.text.trim(),
-      'shopImage': _base64Image ?? '',
+      'custom_offer': _offerController.text.trim(), // दुकानदार का अपना डिस्काउंट/ऑफर पाठ
+      'shopImage': _mainBase64Image ?? '',
+      'galleryImages': _galleryBase64Images, // 5 फोटो
+      'totalPassedBills': totalPassedBills, // रैंकिंग के लिए आवश्यक
+      'totalSalesAmount': totalSalesAmount,
       'subscription_tier': widget.existingData?['subscription_tier'] ?? 'FREE',
       'updatedAt': ServerValue.timestamp,
     });
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('दुकान की जानकारी सेव हो गई!')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('दुकान की ब्रांडेड जानकारी सेव हो गई!')));
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => ShopkeeperDashboardScreen(shopPhone: widget.shopPhone)),
@@ -758,20 +792,21 @@ class _RegisterShopScreenState extends State<RegisterShopScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // 1. मुख्य प्रोफाइल बैनर फोटो
             Center(
               child: Stack(
                 children: [
                   CircleAvatar(
                     radius: 50,
                     backgroundColor: Colors.grey.shade200,
-                    backgroundImage: _base64Image != null && _base64Image!.isNotEmpty ? MemoryImage(base64Decode(_base64Image!)) : null,
-                    child: _base64Image == null || _base64Image!.isEmpty ? const Icon(Icons.store, size: 50, color: Colors.grey) : null,
+                    backgroundImage: _mainBase64Image != null && _mainBase64Image!.isNotEmpty ? MemoryImage(base64Decode(_mainBase64Image!)) : null,
+                    child: _mainBase64Image == null || _mainBase64Image!.isEmpty ? const Icon(Icons.store, size: 50, color: Colors.grey) : null,
                   ),
                   Positioned(
                     bottom: 0,
                     right: 0,
                     child: InkWell(
-                      onTap: _pickImage,
+                      onTap: _pickMainImage,
                       child: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: const BoxDecoration(color: Color(0xFF10B981), shape: BoxShape.circle),
@@ -782,17 +817,71 @@ class _RegisterShopScreenState extends State<RegisterShopScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
+
+            // 2. दुकान की 5 फ़ोटो अपलोड प्रिव्यू (Gallery)
+            const Text('दुकान/स्टॉक की 5 फ़ोटो अपलोड करें:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+            const SizedBox(height: 8),
+            GestureDetector(
+              onTap: _pickGalleryImages,
+              child: Container(
+                height: 100,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFF10B981), width: 1.5),
+                ),
+                child: _galleryBase64Images.isEmpty
+                    ? const Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.add_a_photo, size: 32, color: Color(0xFF10B981)),
+                          SizedBox(height: 4),
+                          Text('यहाँ टैप करके दुकान/स्टॉक की 5 फोटो तक चुनें', style: TextStyle(fontSize: 12, color: Colors.black54)),
+                        ],
+                      )
+                    : ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: _galleryBase64Images.length,
+                        itemBuilder: (context, index) {
+                          return Padding(
+                            padding: const EdgeInsets.all(6.0),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.memory(base64Decode(_galleryBase64Images[index]), width: 85, height: 85, fit: BoxFit.cover),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ),
+            const SizedBox(height: 20),
+
             TextField(controller: _shopNameController, decoration: InputDecoration(labelText: 'दुकान का नाम', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)))),
             const SizedBox(height: 16),
             TextField(controller: _categoryController, decoration: InputDecoration(labelText: 'कैटेगरी (जैसे: सैनिटरी, टाइल्स, पेंट, हार्डवेयर)', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)))),
             const SizedBox(height: 16),
             TextField(controller: _addressController, decoration: InputDecoration(labelText: 'दुकान का पता (जैसे: अनंगपुर रोड, फरीदाबाद)', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)))),
-            const SizedBox(height: 30),
+            const SizedBox(height: 16),
+
+            // 3. दुकानदार का कस्टम ऐड/ऑफ़र टेक्स्ट बॉक्स
+            TextField(
+              controller: _offerController,
+              maxLines: 2,
+              decoration: InputDecoration(
+                labelText: 'दुकान का स्पेशल ऑफर / डिस्काउंट संदेश (ऑप्शनल)',
+                hintText: 'उदा: इस हफ्ते सैनिटरी फिटिंग पर स्पेशल 5% अतिरिक्त छूट!',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                filled: true,
+                fillColor: Colors.amber.shade50,
+              ),
+            ),
+            const SizedBox(height: 28),
+
             ElevatedButton(
               onPressed: _saveShop,
               style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981), padding: const EdgeInsets.symmetric(vertical: 18), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-              child: const Text('दुकान की जानकारी सेव करें', style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold)),
+              child: const Text('ब्रांडेड दुकान जानकारी सेव करें', style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold)),
             ),
           ],
         ),
@@ -801,9 +890,9 @@ class _RegisterShopScreenState extends State<RegisterShopScreen> {
   }
 }
 
-// ---------------------------------------------------------
-// 7. SHOPKEEPER DASHBOARD (AUTO-CHECK SHOP & VERIFY CODE)
-// ---------------------------------------------------------
+// =========================================================
+// 2. SHOPKEEPER DASHBOARD (AUTO-RANKING + TODAY/TOTAL LEDGER)
+// =========================================================
 class ShopkeeperDashboardScreen extends StatefulWidget {
   final String shopPhone;
   const ShopkeeperDashboardScreen({super.key, required this.shopPhone});
@@ -817,6 +906,9 @@ class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen> {
   final DatabaseReference _dbRef = FirebaseDatabase.instance.ref();
   Map? _shopData;
   bool _isLoading = true;
+
+  int _todaySales = 0;
+  int _todayBills = 0;
 
   @override
   void initState() {
@@ -838,7 +930,36 @@ class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen> {
         _shopData = snapshot.value as Map;
         _isLoading = false;
       });
+      _fetchTodayLedger();
     }
+  }
+
+  // आज के बिलों और बिक्री का लेजर निकालना
+  void _fetchTodayLedger() {
+    DateTime now = DateTime.now();
+    String todayKey = "${now.year}-${now.month}-${now.day}";
+
+    _dbRef.child('passed_bills').orderByChild('shopPhone').equalTo(widget.shopPhone).onValue.listen((event) {
+      if (event.snapshot.exists) {
+        Map bills = event.snapshot.value as Map;
+        int tSales = 0;
+        int tBills = 0;
+
+        bills.forEach((key, value) {
+          if (value['dateKey'] == todayKey) {
+            tSales += (value['amount'] as num).toInt();
+            tBills++;
+          }
+        });
+
+        if (mounted) {
+          setState(() {
+            _todaySales = tSales;
+            _todayBills = tBills;
+          });
+        }
+      }
+    });
   }
 
   void _verifyAndDeductCommission() async {
@@ -856,20 +977,20 @@ class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen> {
     String userPhone = data['userPhone'];
     String mistryPhone = data['mistryPhone'] ?? '';
 
-    // 3% Commission Breakdown
-    double viziaCut = amount * 0.02; // 2% Net Profit
-    double customerCashback = mistryPhone.isEmpty ? (amount * 0.01) : (amount * 0.005); // 1% or 0.5%
-    double mistryBonus = mistryPhone.isNotEmpty ? (amount * 0.005) : 0.0; // 0.5%
+    // 3% कमिशन ब्रेकडाउन
+    double viziaCut = amount * 0.02; // 2% Viziawork Net Profit
+    double customerCashback = mistryPhone.isEmpty ? (amount * 0.01) : (amount * 0.005); // 1% या 0.5%
+    double mistryBonus = mistryPhone.isNotEmpty ? (amount * 0.005) : 0.0; // 0.5% मिस्त्री
 
-    // Update Customer Wallet
+    // 1. कस्टमर वॉलेट अपडेट
     await _dbRef.child('users').child(userPhone).child('wallet_balance').set(ServerValue.increment(customerCashback.toInt()));
 
-    // Update Mistry Wallet if exists
+    // 2. मिस्त्री वॉलेट अपडेट
     if (mistryPhone.isNotEmpty) {
       await _dbRef.child('users').child(mistryPhone).child('wallet_balance').set(ServerValue.increment(mistryBonus.toInt()));
     }
 
-    // Record Viziawork Commission
+    // 3. Viziawork कमिशन रिकॉर्ड
     await _dbRef.child('viziawork_earnings').push().set({
       'shopPhone': widget.shopPhone,
       'billAmount': amount,
@@ -877,16 +998,34 @@ class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen> {
       'createdAt': ServerValue.timestamp,
     });
 
-    // Delete Code
+    // 4. दुकान के कुल बिल और टोटल सेल्स इंक्रीमेंट (रैंकिंग के लिए)
+    await _dbRef.child('shops').child(widget.shopPhone).update({
+      'totalPassedBills': ServerValue.increment(1),
+      'totalSalesAmount': ServerValue.increment(amount),
+    });
+
+    // 5. डेली लेजर रिकॉर्ड सेव करें
+    DateTime now = DateTime.now();
+    String todayKey = "${now.year}-${now.month}-${now.day}";
+    await _dbRef.child('passed_bills').push().set({
+      'shopPhone': widget.shopPhone,
+      'userPhone': userPhone,
+      'amount': amount,
+      'dateKey': todayKey,
+      'createdAt': ServerValue.timestamp,
+    });
+
+    // 6. पेंडिंग कोड डिलीट करें
     await _dbRef.child('pending_codes').child(code).remove();
 
     if (mounted) {
       _codeController.clear();
+      _checkShopExists(); // रिफ्रेश
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('बिल कोड वेरिफाई हो गया!'),
-          content: Text('कुल बिल: ₹$amount\nकस्टमर कैशबैक: ₹${customerCashback.toInt()}\nमिस्त्री बोनस: ₹${mistryBonus.toInt()}'),
+          content: Text('कुल बिल: ₹$amount\nकस्टमर कैशबैक: ₹${customerCashback.toInt()}\nमिस्त्री बोनस: ₹${mistryBonus.toInt()}\n\nआपकी दुकान का रैंकिंग काउंट अपडेट हो गया है!'),
           actions: [ElevatedButton(onPressed: () => Navigator.pop(context), child: const Text('ठीक है'))],
         ),
       );
@@ -898,6 +1037,9 @@ class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen> {
     if (_isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator(color: Color(0xFF10B981))));
     }
+
+    int totalBills = _shopData?['totalPassedBills'] ?? 0;
+    int totalSales = _shopData?['totalSalesAmount'] ?? 0;
 
     return Scaffold(
       appBar: AppBar(
@@ -914,11 +1056,55 @@ class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen> {
           )
         ],
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // 📊 1. रैंकिंग और आज का लेजर बोर्ड
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(color: const Color(0xFF0F172A), borderRadius: BorderRadius.circular(16)),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('🏆 पास हुए बिल (रैंकिंग काउंट)', style: TextStyle(color: Colors.amber, fontSize: 13, fontWeight: FontWeight.bold)),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(color: Colors.amber, borderRadius: BorderRadius.circular(12)),
+                        child: Text('$totalBills बिल पास', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black)),
+                      )
+                    ],
+                  ),
+                  const Divider(color: Colors.white24, height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('आज का बिजनेस', style: TextStyle(color: Colors.grey, fontSize: 11)),
+                          Text('₹$_todaySales', style: const TextStyle(color: Colors.greenAccent, fontSize: 18, fontWeight: FontWeight.bold)),
+                          Text('($_todayBills बिल आज)', style: const TextStyle(color: Colors.white54, fontSize: 10)),
+                        ],
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          const Text('कुल लाइफटाइम बिजनेस', style: TextStyle(color: Colors.grey, fontSize: 11)),
+                          Text('₹$totalSales', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    ],
+                  )
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // 2. दुकान प्रोफाइल प्रिव्यू कार्ड
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(color: const Color(0xFF10B981).withOpacity(0.1), borderRadius: BorderRadius.circular(16)),
@@ -932,13 +1118,19 @@ class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen> {
                       children: [
                         Text(_shopData?['shop_name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                         Text('${_shopData?['category']} • ${_shopData?['address']}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                        if (_shopData?['custom_offer'] != null && _shopData!['custom_offer'].toString().isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text('🏷️ ${_shopData!['custom_offer']}', style: const TextStyle(fontSize: 11, color: Colors.orange, fontWeight: FontWeight.bold)),
+                        ]
                       ],
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 30),
+            const SizedBox(height: 24),
+
+            // 3. कोड दर्ज करने का बॉक्स
             const Text('ग्राहक/मिस्त्री का 4-Digit Code दर्ज करें:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
             TextField(
@@ -963,3 +1155,5 @@ class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen> {
     );
   }
 }
+
+                                        
