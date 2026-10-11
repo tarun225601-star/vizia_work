@@ -51,7 +51,7 @@ class ViziaworkApp extends StatelessWidget {
 }
 
 // ---------------------------------------------------------
-// 0. SPLASH SCREEN (AUTOLOGIN WITH SHAREDPREFERENCES)
+// 0. SPLASH SCREEN (WITH AUTO-LOGIN & SHARED PREFERENCES)
 // ---------------------------------------------------------
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -196,7 +196,7 @@ class _LoginScreenState extends State<LoginScreen> {
 }
 
 // ---------------------------------------------------------
-// 2. OTP VERIFICATION SCREEN
+// 2. OTP VERIFICATION SCREEN (WITH BACK BUTTON)
 // ---------------------------------------------------------
 class OtpVerificationScreen extends StatefulWidget {
   final String phone;
@@ -224,7 +224,13 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('OTP सत्यापन')),
+      appBar: AppBar(
+        title: const Text('OTP सत्यापन'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
       body: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Column(
@@ -262,7 +268,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
 }
 
 // ---------------------------------------------------------
-// 3. ROLE SELECTION SCREEN
+// 3. ROLE SELECTION SCREEN (WITH BACK BUTTON)
 // ---------------------------------------------------------
 class RoleSelectionScreen extends StatelessWidget {
   final String phone;
@@ -276,7 +282,19 @@ class RoleSelectionScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Viziawork - मुख्य मेनू'), automaticallyImplyLeading: false),
+      appBar: AppBar(
+        title: const Text('Viziawork - मुख्य मेनू'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          onPressed: () async {
+            SharedPreferences prefs = await SharedPreferences.getInstance();
+            await prefs.clear();
+            if (context.mounted) {
+              Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const LoginScreen()));
+            }
+          },
+        ),
+      ),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Column(
@@ -374,7 +392,7 @@ class RoleSelectionScreen extends StatelessWidget {
 }
 
 // ---------------------------------------------------------
-// 4. MAIN HOME SCREEN
+// 4. MAIN HOME SCREEN (SHOWS UNLOCKED SHOPS ONLY)
 // ---------------------------------------------------------
 class HomeScreen extends StatefulWidget {
   final String userPhone;
@@ -507,6 +525,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     return Scaffold(
       appBar: AppBar(
         title: const Text('Viziawork'),
+        leading: IconButton(
+          icon: const Icon(Icons.swap_horiz_rounded),
+          tooltip: 'रोल बदलें',
+          onPressed: () => Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => RoleSelectionScreen(phone: widget.userPhone)),
+          ),
+        ),
         actions: [
           Container(
             margin: const EdgeInsets.only(right: 16),
@@ -520,7 +546,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         bottom: TabBar(
           controller: _tabController,
           labelColor: const Color(0xFF10B981),
-          unselectedLabelColor: Colors.grey,
+          unselectedColor: Colors.grey,
           indicatorColor: const Color(0xFF10B981),
           tabs: const [
             Tab(icon: Icon(Icons.engineering), text: 'कारीगर व ठेकेदार'),
@@ -596,10 +622,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         if (snapshot.value == null) return Container();
         Map shopData = snapshot.value as Map;
 
+        bool isLocked = shopData['isLocked'] ?? false;
+        if (isLocked) return Container(); // 🔒 locked दुकान ग्राहकों को नहीं दिखेगी
+
         String mainImage = shopData['shopImage'] ?? '';
         List galleryImages = shopData['galleryImages'] ?? [];
         String customOffer = shopData['custom_offer'] ?? '';
         int totalBills = shopData['totalPassedBills'] ?? 0;
+        int totalSales = shopData['totalSalesAmount'] ?? 0;
 
         return Card(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -646,6 +676,29 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       ),
                     ),
                   ),
+                  Positioned(
+                    top: 12,
+                    left: 12,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0F172A),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4)],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.payments_rounded, color: Colors.greenAccent, size: 14),
+                          const SizedBox(width: 4),
+                          Text(
+                            'कुल बिजनेस: ₹$totalSales',
+                            style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold, fontSize: 11),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
               ),
               Padding(
@@ -653,9 +706,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      shopData['shop_name'] ?? 'दुकान का नाम',
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            shopData['shop_name'] ?? 'दुकान का नाम',
+                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        Text(
+                          '₹$totalSales बिक्री',
+                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF10B981)),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -728,7 +792,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 }
 
 // ---------------------------------------------------------
-// 5. REGISTER WORKER SCREEN
+// 5. REGISTER WORKER SCREEN (WITH BACK BUTTON)
 // ---------------------------------------------------------
 class RegisterWorkerScreen extends StatefulWidget {
   final String workerPhone;
@@ -795,14 +859,26 @@ class _RegisterWorkerScreenState extends State<RegisterWorkerScreen> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('कारीगर प्रोफाइल सफलता से सेव हो गई!')));
-      Navigator.pop(context);
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => HomeScreen(userPhone: widget.workerPhone, isContractor: true)),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('कारीगर / ठेकेदार रजिस्ट्रेशन')),
+      appBar: AppBar(
+        title: const Text('कारीगर / ठेकेदार रजिस्ट्रेशन'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          onPressed: () => Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => RoleSelectionScreen(phone: widget.workerPhone)),
+          ),
+        ),
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Column(
@@ -852,7 +928,7 @@ class _RegisterWorkerScreenState extends State<RegisterWorkerScreen> {
 }
 
 // ---------------------------------------------------------
-// 6. SHOPKEEPER REGISTER / EDIT FORM
+// 6. SHOPKEEPER REGISTER / EDIT FORM (WITH BACK BUTTON)
 // ---------------------------------------------------------
 class RegisterShopScreen extends StatefulWidget {
   final String shopPhone;
@@ -957,6 +1033,8 @@ class _RegisterShopScreenState extends State<RegisterShopScreen> {
       'galleryImages': _galleryBase64Images,
       'totalPassedBills': totalPassedBills,
       'totalSalesAmount': totalSalesAmount,
+      'isLocked': widget.existingData?['isLocked'] ?? false,
+      'pendingCommission': widget.existingData?['pendingCommission'] ?? 0.0,
       'subscription_tier': widget.existingData?['subscription_tier'] ?? 'FREE',
       'updatedAt': ServerValue.timestamp,
     });
@@ -973,7 +1051,13 @@ class _RegisterShopScreenState extends State<RegisterShopScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.existingData != null ? 'दुकान की जानकारी बदलें' : 'अपनी दुकान लिस्ट करें')),
+      appBar: AppBar(
+        title: Text(widget.existingData != null ? 'दुकान की जानकारी बदलें' : 'अपनी दुकान लिस्ट करें'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Column(
@@ -1081,7 +1165,7 @@ class _RegisterShopScreenState extends State<RegisterShopScreen> {
 }
 
 // ---------------------------------------------------------
-// 7. SHOPKEEPER DASHBOARD (WITH CODE VERIFICATION BOX)
+// 7. SHOPKEEPER DASHBOARD (WITH 10 PM AUTO-LOCK SYSTEM)
 // ---------------------------------------------------------
 class ShopkeeperDashboardScreen extends StatefulWidget {
   final String shopPhone;
@@ -1099,6 +1183,15 @@ class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen> {
 
   int _todaySales = 0;
   int _todayBills = 0;
+  double _pendingCommission = 0.0;
+  bool _isLocked = false;
+
+  // 🏛️ Payment Settlement Destinations
+  final String _viziaUpiId = "9971968060@ptyes";
+  final String _viziaBankName = "Central Bank of India";
+  final String _viziaAccountNumber = "4029330823";
+  final String _viziaIfscCode = "CBIN0280248";
+  final String _viziaBranch = "Jattari Branch, Aligarh";
 
   @override
   void initState() {
@@ -1116,8 +1209,21 @@ class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen> {
         );
       }
     } else {
+      Map data = snapshot.value as Map;
+      bool lockedState = data['isLocked'] ?? false;
+      double pending = (data['pendingCommission'] ?? 0.0).toDouble();
+
+      // ⏰ Check 10:00 PM Cutoff Logic
+      DateTime now = DateTime.now();
+      if (now.hour >= 22 && pending > 0) {
+        lockedState = true;
+        await _dbRef.child('shops').child(widget.shopPhone).update({'isLocked': true});
+      }
+
       setState(() {
-        _shopData = snapshot.value as Map;
+        _shopData = data;
+        _isLocked = lockedState;
+        _pendingCommission = pending;
         _isLoading = false;
       });
       _fetchTodayLedger();
@@ -1152,6 +1258,11 @@ class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen> {
   }
 
   void _verifyAndDeductCommission() async {
+    if (_isLocked) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('दुकान लॉक है! पहले रात 10 बजे का कमिशन सेटल करें।')));
+      return;
+    }
+
     String code = _codeController.text.trim();
     if (code.length < 4) return;
 
@@ -1166,26 +1277,36 @@ class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen> {
     String userPhone = data['userPhone'];
     String mistryPhone = data['mistryPhone'] ?? '';
 
-    double viziaCut = amount * 0.02;
+    // 3% Commission Breakdown
+    double viziaCut = amount * 0.02; // 2% Viziawork Cut
     double customerCashback = mistryPhone.isEmpty ? (amount * 0.01) : (amount * 0.005);
     double mistryBonus = mistryPhone.isNotEmpty ? (amount * 0.005) : 0.0;
 
+    // 1. Customer Cashback Transfer
     await _dbRef.child('users').child(userPhone).child('wallet_balance').set(ServerValue.increment(customerCashback.toInt()));
 
+    // 2. Mistry Bonus Transfer
     if (mistryPhone.isNotEmpty) {
       await _dbRef.child('users').child(mistryPhone).child('wallet_balance').set(ServerValue.increment(mistryBonus.toInt()));
     }
 
-    await _dbRef.child('viziawork_earnings').push().set({
-      'shopPhone': widget.shopPhone,
-      'billAmount': amount,
-      'viziaNetProfit': viziaCut,
-      'createdAt': ServerValue.timestamp,
-    });
-
+    // 3. Update Pending Daily Commission Ledger
     await _dbRef.child('shops').child(widget.shopPhone).update({
       'totalPassedBills': ServerValue.increment(1),
       'totalSalesAmount': ServerValue.increment(amount),
+      'pendingCommission': ServerValue.increment(viziaCut),
+    });
+
+    // 4. Save Entry
+    await _dbRef.child('viziawork_settlements').push().set({
+      'shopPhone': widget.shopPhone,
+      'billAmount': amount,
+      'viziaNetProfit': viziaCut,
+      'settlementUpi': _viziaUpiId,
+      'bankName': _viziaBankName,
+      'accountNumber': _viziaAccountNumber,
+      'ifscCode': _viziaIfscCode,
+      'createdAt': ServerValue.timestamp,
     });
 
     DateTime now = DateTime.now();
@@ -1206,11 +1327,30 @@ class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen> {
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('बिल कोड वेरिफाई हो गया!'),
-          content: Text('कुल बिल: ₹$amount\nकस्टमर कैशबैक: ₹${customerCashback.toInt()}\nमिस्त्री बोनस: ₹${mistryBonus.toInt()}\n\nआपकी दुकान का बिल काउंट +1 जुड़ गया है!'),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('बिल कोड सफलता से पास हुआ!'),
+          content: Text(
+            'कुल बिल: ₹$amount\n'
+            'कस्टमर कैशबैक: ₹${customerCashback.toInt()}\n'
+            'मिस्त्री बोनस: ₹${mistryBonus.toInt()}\n'
+            'Viziawork 2% कमिशन: ₹${viziaCut.toStringAsFixed(1)}\n\n'
+            '⚠️ ध्यान दें: रात 10:00 बजे से पहले कमिशन पे करें, वरना दुकान लॉक हो जाएगी!',
+          ),
           actions: [ElevatedButton(onPressed: () => Navigator.pop(context), child: const Text('ठीक है'))],
         ),
       );
+    }
+  }
+
+  void _clearCommissionAndUnlock() async {
+    await _dbRef.child('shops').child(widget.shopPhone).update({
+      'pendingCommission': 0.0,
+      'isLocked': false,
+    });
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('कमिशन सेटल हो गया! दुकान अनलॉक हो गई है।')));
+      _checkShopExists();
     }
   }
 
@@ -1229,6 +1369,14 @@ class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(_shopData?['shop_name'] ?? 'दुकानदार डैशबोर्ड'),
+        leading: IconButton(
+          icon: const Icon(Icons.swap_horiz_rounded),
+          tooltip: 'रोल बदलें',
+          onPressed: () => Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => RoleSelectionScreen(phone: widget.shopPhone)),
+          ),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.edit, color: Color(0xFF10B981)),
@@ -1245,6 +1393,37 @@ class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // 🔒 LOCK WARNING BANNER
+            if (_isLocked)
+              Container(
+                color: Colors.red.shade800,
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.lock, color: Colors.white, size: 24),
+                        SizedBox(width: 8),
+                        Text('आपकी दुकान लॉक हो चुकी है!', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'रात 10:00 बजे तक ₹${_pendingCommission.toStringAsFixed(1)} कमिशन जमा न होने के कारण दुकान डेटाबेस में लॉक है।',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.white70, fontSize: 12),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Colors.red.shade900),
+                      onPressed: _clearCommissionAndUnlock,
+                      child: const Text('कमिशन पे करके दुकान अनलॉक करें', style: TextStyle(fontWeight: FontWeight.bold)),
+                    )
+                  ],
+                ),
+              ),
+
             Container(
               height: 180,
               width: double.infinity,
@@ -1315,6 +1494,7 @@ class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen> {
 
                   const SizedBox(height: 24),
 
+                  // 📊 बिजनेस लेजर बोर्ड (Dual Settlement & 10 PM Cutoff)
                   Container(
                     padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(color: const Color(0xFF0F172A), borderRadius: BorderRadius.circular(16)),
@@ -1347,13 +1527,39 @@ class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen> {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
-                                const Text('कुल लाइफटाइम बिजनेस', style: TextStyle(color: Colors.grey, fontSize: 11)),
+                                const Text('आज का देय कमिशन (10 PM)', style: TextStyle(color: Colors.orangeAccent, fontSize: 11)),
                                 const SizedBox(height: 2),
-                                Text('₹$totalSales', style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                                Text('₹${_pendingCommission.toStringAsFixed(1)}', style: const TextStyle(color: Colors.orangeAccent, fontSize: 20, fontWeight: FontWeight.bold)),
                               ],
                             ),
                           ],
-                        )
+                        ),
+                        const SizedBox(height: 14),
+                        const Divider(color: Colors.white24, height: 1),
+                        const SizedBox(height: 10),
+                        
+                        // 💳 UPI Option
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.qr_code_2_rounded, color: Colors.greenAccent, size: 16),
+                            const SizedBox(width: 6),
+                            Text('UPI ID: $_viziaUpiId', style: const TextStyle(color: Colors.greenAccent, fontSize: 12, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        
+                        // 🏛️ Direct Bank Option
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.account_balance_rounded, color: Colors.amberAccent, size: 16),
+                            const SizedBox(width: 6),
+                            Text('A/C: $_viziaAccountNumber • IFSC: $_viziaIfscCode', style: const TextStyle(color: Colors.amberAccent, fontSize: 11, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Text('($_viziaBankName, $_viziaBranch)', style: const TextStyle(color: Colors.white54, fontSize: 10)),
                       ],
                     ),
                   ),
@@ -1365,19 +1571,24 @@ class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen> {
                   const SizedBox(height: 12),
                   TextField(
                     controller: _codeController,
+                    enabled: !_isLocked,
                     keyboardType: TextInputType.number,
                     maxLength: 4,
                     style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, letterSpacing: 10),
                     decoration: InputDecoration(
-                      hintText: '6842',
+                      hintText: _isLocked ? '🔒 दुकान लॉक है' : '6842',
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
                     ),
                   ),
                   const SizedBox(height: 16),
                   ElevatedButton(
-                    onPressed: _verifyAndDeductCommission,
-                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981), padding: const EdgeInsets.symmetric(vertical: 18), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-                    child: const Text('बिल वेरिफाई करें & कैशबैक ट्रांसफर करें', style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold)),
+                    onPressed: _isLocked ? null : _verifyAndDeductCommission,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _isLocked ? Colors.grey : const Color(0xFF10B981),
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                    child: Text(_isLocked ? '🔒 दुकान लॉक है (पेमेंट करें)' : 'बिल वेरिफाई करें & कैशबैक ट्रांसफर करें', style: const TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold)),
                   ),
                 ],
               ),
