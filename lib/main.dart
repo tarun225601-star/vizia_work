@@ -6,6 +6,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_database/ui/firebase_animated_list.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 void main() async {
@@ -44,7 +45,54 @@ class ViziaworkApp extends StatelessWidget {
           iconTheme: IconThemeData(color: Colors.black),
         ),
       ),
-      home: const LoginScreen(),
+      home: const SplashScreen(),
+    );
+  }
+}
+
+// ---------------------------------------------------------
+// 0. SPLASH SCREEN (AUTOLOGIN WITH SHAREDPREFERENCES)
+// ---------------------------------------------------------
+class SplashScreen extends StatefulWidget {
+  const SplashScreen({super.key});
+
+  @override
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _checkSavedUser();
+  }
+
+  void _checkSavedUser() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? phone = prefs.getString('user_phone');
+    String? role = prefs.getString('user_role');
+
+    await Future.delayed(const Duration(seconds: 1));
+
+    if (!mounted) return;
+
+    if (phone != null && phone.isNotEmpty) {
+      if (role == 'SHOPKEEPER') {
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => ShopkeeperDashboardScreen(shopPhone: phone)));
+      } else {
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => HomeScreen(userPhone: phone, isContractor: role == 'CONTRACTOR')));
+      }
+    } else {
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const LoginScreen()));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(
+        child: CircularProgressIndicator(color: Color(0xFF10B981)),
+      ),
     );
   }
 }
@@ -62,7 +110,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _phoneController = TextEditingController();
 
-  void _sendOtp() {
+  void _sendOtp() async {
     String phone = _phoneController.text.trim();
     if (phone.length < 10) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -70,10 +118,16 @@ class _LoginScreenState extends State<LoginScreen> {
       );
       return;
     }
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => OtpVerificationScreen(phone: phone)),
-    );
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString('user_phone', phone);
+
+    if (mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => OtpVerificationScreen(phone: phone)),
+      );
+    }
   }
 
   @override
@@ -214,6 +268,11 @@ class RoleSelectionScreen extends StatelessWidget {
   final String phone;
   const RoleSelectionScreen({super.key, required this.phone});
 
+  void _saveRole(String role) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString('user_role', role);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -236,6 +295,7 @@ class RoleSelectionScreen extends StatelessWidget {
               subtitle: '100% मुफ़्त मिस्त्री खोजें & मटीरियल बिल पर 1% कैशबैक पाएं',
               icon: Icons.person_search_rounded,
               onTap: () {
+                _saveRole('USER');
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => HomeScreen(userPhone: phone, isContractor: false)),
@@ -249,6 +309,7 @@ class RoleSelectionScreen extends StatelessWidget {
               subtitle: 'मुफ़्त रजिस्ट्रेशन करें, नया काम पाएं और 0.5% मटीरियल बोनस कमाएं',
               icon: Icons.engineering_rounded,
               onTap: () {
+                _saveRole('CONTRACTOR');
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => RegisterWorkerScreen(workerPhone: phone)),
@@ -262,6 +323,7 @@ class RoleSelectionScreen extends StatelessWidget {
               subtitle: 'अपनी दुकान लिस्ट करें, ग्राहक पाएं & बिल कोड वेरिफाई करें',
               icon: Icons.storefront_rounded,
               onTap: () {
+                _saveRole('SHOPKEEPER');
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => ShopkeeperDashboardScreen(shopPhone: phone)),
@@ -526,7 +588,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
 
-  // 🏪 कस्टमर लिस्टिंग के लिए नया ब्रांडेड मटीरियल दुकानें टैब
   Widget _buildShopsList() {
     DatabaseReference shopsRef = FirebaseDatabase.instance.ref().child('shops');
     return FirebaseAnimatedList(
@@ -534,7 +595,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       itemBuilder: (context, snapshot, animation, index) {
         if (snapshot.value == null) return Container();
         Map shopData = snapshot.value as Map;
-        
+
         String mainImage = shopData['shopImage'] ?? '';
         List galleryImages = shopData['galleryImages'] ?? [];
         String customOffer = shopData['custom_offer'] ?? '';
@@ -548,7 +609,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // 1. बड़ा मुख्य शॉप बैनर + कुल पास बिल बैज
               Stack(
                 children: [
                   Container(
@@ -588,7 +648,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   ),
                 ],
               ),
-
               Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
@@ -603,8 +662,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       '${shopData['category']} • ${shopData['address']}',
                       style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
                     ),
-
-                    // 2. दुकानदार का कस्टम ऑफर बैनर
                     if (customOffer.isNotEmpty) ...[
                       const SizedBox(height: 10),
                       Container(
@@ -633,8 +690,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         ),
                       ),
                     ],
-
-                    // 3. 5 फोटो की गैलरी स्ट्रिप
                     if (galleryImages.isNotEmpty) ...[
                       const SizedBox(height: 12),
                       const Text('दुकान/स्टॉक की गैलरी फोटो:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54)),
@@ -689,6 +744,22 @@ class _RegisterWorkerScreenState extends State<RegisterWorkerScreen> {
   final TextEditingController _addressController = TextEditingController();
   String? _base64Image;
 
+  @override
+  void initState() {
+    super.initState();
+    _loadLocalWorker();
+  }
+
+  void _loadLocalWorker() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _nameController.text = prefs.getString('worker_name') ?? '';
+      _skillController.text = prefs.getString('worker_skill') ?? '';
+      _addressController.text = prefs.getString('worker_address') ?? '';
+      _base64Image = prefs.getString('worker_image') ?? '';
+    });
+  }
+
   Future<void> _pickImage() async {
     final ImagePicker picker = ImagePicker();
     final XFile? image = await picker.pickImage(source: ImageSource.gallery, imageQuality: 40);
@@ -706,6 +777,12 @@ class _RegisterWorkerScreenState extends State<RegisterWorkerScreen> {
       return;
     }
 
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString('worker_name', _nameController.text.trim());
+    await prefs.setString('worker_skill', _skillController.text.trim());
+    await prefs.setString('worker_address', _addressController.text.trim());
+    await prefs.setString('worker_image', _base64Image ?? '');
+
     DatabaseReference ref = FirebaseDatabase.instance.ref().child('public_workers').child(widget.workerPhone);
     await ref.set({
       'name': _nameController.text.trim(),
@@ -717,7 +794,7 @@ class _RegisterWorkerScreenState extends State<RegisterWorkerScreen> {
     });
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('कारीगर प्रोफाइल सक्सेसफुली सेव हो गई!')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('कारीगर प्रोफाइल सफलता से सेव हो गई!')));
       Navigator.pop(context);
     }
   }
@@ -799,6 +876,12 @@ class _RegisterShopScreenState extends State<RegisterShopScreen> {
   @override
   void initState() {
     super.initState();
+    _loadShopData();
+  }
+
+  void _loadShopData() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+
     if (widget.existingData != null) {
       _shopNameController.text = widget.existingData!['shop_name'] ?? '';
       _categoryController.text = widget.existingData!['category'] ?? '';
@@ -809,7 +892,14 @@ class _RegisterShopScreenState extends State<RegisterShopScreen> {
       if (widget.existingData!['galleryImages'] != null) {
         _galleryBase64Images = List<String>.from(widget.existingData!['galleryImages']);
       }
+    } else {
+      _shopNameController.text = prefs.getString('shop_name') ?? '';
+      _categoryController.text = prefs.getString('shop_category') ?? '';
+      _addressController.text = prefs.getString('shop_address') ?? '';
+      _offerController.text = prefs.getString('shop_offer') ?? '';
+      _mainBase64Image = prefs.getString('shop_main_image') ?? '';
     }
+    setState(() {});
   }
 
   Future<void> _pickMainImage() async {
@@ -845,6 +935,13 @@ class _RegisterShopScreenState extends State<RegisterShopScreen> {
       return;
     }
 
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString('shop_name', _shopNameController.text.trim());
+    await prefs.setString('shop_category', _categoryController.text.trim());
+    await prefs.setString('shop_address', _addressController.text.trim());
+    await prefs.setString('shop_offer', _offerController.text.trim());
+    await prefs.setString('shop_main_image', _mainBase64Image ?? '');
+
     DatabaseReference ref = FirebaseDatabase.instance.ref().child('shops').child(widget.shopPhone);
     
     int totalPassedBills = widget.existingData?['totalPassedBills'] ?? 0;
@@ -865,7 +962,7 @@ class _RegisterShopScreenState extends State<RegisterShopScreen> {
     });
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('दुकान की ब्रांडेड जानकारी सेव हो गई!')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('दुकान की जानकारी सेव हो गई!')));
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => ShopkeeperDashboardScreen(shopPhone: widget.shopPhone)),
@@ -984,7 +1081,7 @@ class _RegisterShopScreenState extends State<RegisterShopScreen> {
 }
 
 // ---------------------------------------------------------
-// 7. SHOPKEEPER DASHBOARD
+// 7. SHOPKEEPER DASHBOARD (WITH CODE VERIFICATION BOX)
 // ---------------------------------------------------------
 class ShopkeeperDashboardScreen extends StatefulWidget {
   final String shopPhone;
@@ -995,6 +1092,7 @@ class ShopkeeperDashboardScreen extends StatefulWidget {
 }
 
 class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen> {
+  final TextEditingController _codeController = TextEditingController();
   final DatabaseReference _dbRef = FirebaseDatabase.instance.ref();
   Map? _shopData;
   bool _isLoading = true;
@@ -1053,6 +1151,69 @@ class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen> {
     });
   }
 
+  void _verifyAndDeductCommission() async {
+    String code = _codeController.text.trim();
+    if (code.length < 4) return;
+
+    DataSnapshot snapshot = await _dbRef.child('pending_codes').child(code).get();
+    if (!snapshot.exists) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('अमान्य कोड! दोबारा जाँचें')));
+      return;
+    }
+
+    Map data = snapshot.value as Map;
+    int amount = data['amount'];
+    String userPhone = data['userPhone'];
+    String mistryPhone = data['mistryPhone'] ?? '';
+
+    double viziaCut = amount * 0.02;
+    double customerCashback = mistryPhone.isEmpty ? (amount * 0.01) : (amount * 0.005);
+    double mistryBonus = mistryPhone.isNotEmpty ? (amount * 0.005) : 0.0;
+
+    await _dbRef.child('users').child(userPhone).child('wallet_balance').set(ServerValue.increment(customerCashback.toInt()));
+
+    if (mistryPhone.isNotEmpty) {
+      await _dbRef.child('users').child(mistryPhone).child('wallet_balance').set(ServerValue.increment(mistryBonus.toInt()));
+    }
+
+    await _dbRef.child('viziawork_earnings').push().set({
+      'shopPhone': widget.shopPhone,
+      'billAmount': amount,
+      'viziaNetProfit': viziaCut,
+      'createdAt': ServerValue.timestamp,
+    });
+
+    await _dbRef.child('shops').child(widget.shopPhone).update({
+      'totalPassedBills': ServerValue.increment(1),
+      'totalSalesAmount': ServerValue.increment(amount),
+    });
+
+    DateTime now = DateTime.now();
+    String todayKey = "${now.year}-${now.month}-${now.day}";
+    await _dbRef.child('passed_bills').push().set({
+      'shopPhone': widget.shopPhone,
+      'userPhone': userPhone,
+      'amount': amount,
+      'dateKey': todayKey,
+      'createdAt': ServerValue.timestamp,
+    });
+
+    await _dbRef.child('pending_codes').child(code).remove();
+
+    if (mounted) {
+      _codeController.clear();
+      _checkShopExists();
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('बिल कोड वेरिफाई हो गया!'),
+          content: Text('कुल बिल: ₹$amount\nकस्टमर कैशबैक: ₹${customerCashback.toInt()}\nमिस्त्री बोनस: ₹${mistryBonus.toInt()}\n\nआपकी दुकान का बिल काउंट +1 जुड़ गया है!'),
+          actions: [ElevatedButton(onPressed: () => Navigator.pop(context), child: const Text('ठीक है'))],
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -1100,7 +1261,7 @@ class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen> {
                   Text(_shopData?['shop_name'] ?? '', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 4),
                   Text('${_shopData?['category']} • ${_shopData?['address']}', style: TextStyle(fontSize: 14, color: Colors.grey.shade700)),
-                  
+
                   if (customOffer.isNotEmpty) ...[
                     const SizedBox(height: 14),
                     Container(
@@ -1195,6 +1356,28 @@ class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen> {
                         )
                       ],
                     ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // 🔑 4-Digit Bill Code दर्ज करने का बॉक्स
+                  const Text('ग्राहक/मिस्त्री का 4-Digit Code दर्ज करें:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _codeController,
+                    keyboardType: TextInputType.number,
+                    maxLength: 4,
+                    style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, letterSpacing: 10),
+                    decoration: InputDecoration(
+                      hintText: '6842',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: _verifyAndDeductCommission,
+                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981), padding: const EdgeInsets.symmetric(vertical: 18), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+                    child: const Text('बिल वेरिफाई करें & कैशबैक ट्रांसफर करें', style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold)),
                   ),
                 ],
               ),
