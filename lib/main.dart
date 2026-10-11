@@ -543,17 +543,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             ),
           ),
         ],
-        bottom: TabBar(
+                bottom: TabBar(
           controller: _tabController,
           labelColor: const Color(0xFF10B981),
-          unselectedLabelColor: Colors.grey
+          unselectedLabelColor: Colors.grey,
           indicatorColor: const Color(0xFF10B981),
           tabs: const [
             Tab(icon: Icon(Icons.engineering), text: 'कारीगर व ठेकेदार'),
             Tab(icon: Icon(Icons.storefront), text: 'मटीरियल दुकानें'),
           ],
         ),
-      ),
+        
       body: TabBarView(
         controller: _tabController,
         children: [
