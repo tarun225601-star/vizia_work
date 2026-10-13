@@ -1,5 +1,5 @@
         
-  import 'dart0convert';
+import 'dartconvert';
 import 'dart:math';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
@@ -1181,8 +1181,8 @@ class _RegisterShopScreenState extends State<RegisterShopScreen> {
   }
 }
 
-// ---------------------------------------------------------
-// 7. SHOPKEEPER DASHBOARD (WITH 10 PM AUTO-LOCK SYSTEM)
+ // ---------------------------------------------------------
+// SHOPKEEPER DASHBOARD (WITH 10 PM AUTO-LOCK & PAGINATION SYSTEM)
 // ---------------------------------------------------------
 class ShopkeeperDashboardScreen extends StatefulWidget {
   final String shopPhone;
@@ -1202,6 +1202,7 @@ class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen> {
   int _todayBills = 0;
   double _pendingCommission = 0.0;
   bool _isLocked = false;
+  String _shopCity = "Faridabad"; // 🚀 दुकान का शहर ट्रैक करने के लिए
 
   // 🏛️ Payment Settlement Destinations
   final String _viziaUpiId = "9971968060@ptyes";
@@ -1229,6 +1230,7 @@ class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen> {
       Map data = snapshot.value as Map;
       bool lockedState = data['isLocked'] ?? false;
       double pending = (data['pendingCommission'] ?? 0.0).toDouble();
+      String city = data['city'] ?? "Faridabad"; // डेटाबेस से सिटी उठा ली
 
       // ⏰ Check 10:00 PM Cutoff Logic
       DateTime now = DateTime.now();
@@ -1241,6 +1243,7 @@ class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen> {
         _shopData = data;
         _isLocked = lockedState;
         _pendingCommission = pending;
+        _shopCity = city;
         _isLoading = false;
       });
       _fetchTodayLedger();
@@ -1456,7 +1459,8 @@ class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen> {
                 children: [
                   Text(_shopData?['shop_name'] ?? '', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 4),
-                  Text('${_shopData?['category']} • ${_shopData?['address']}', style: TextStyle(fontSize: 14, color: Colors.grey.shade700)),
+                  // 🏙️ यहाँ सिटी और एड्रेस दोनों आ गए हैं
+                  Text('${_shopData?['category']} • $_shopCity • ${_shopData?['address']}', style: TextStyle(fontSize: 14, color: Colors.grey.shade700)),
 
                   if (customOffer.isNotEmpty) ...[
                     const SizedBox(height: 14),
@@ -1616,3 +1620,4 @@ class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen> {
     );
   }
 }
+                             
