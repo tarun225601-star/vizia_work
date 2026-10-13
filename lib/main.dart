@@ -1,4 +1,5 @@
-import 'dart:convert';
+        
+  import 'dart0convert';
 import 'dart:math';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
@@ -9,8 +10,12 @@ import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+// 🚀 RAM में डेटा रखने के लिए ग्लोबल वेरिएबल (जीरो लेटेसी के लिए)
+late SharedPreferences globalPrefs;
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
   await Firebase.initializeApp(
     options: const FirebaseOptions(
       apiKey: "AIzaSyDummyKeyForViziawork",
@@ -20,6 +25,10 @@ void main() async {
       databaseURL: "https://viziawork-default-rtdb.firebaseio.com/",
     ),
   );
+
+  // 🚀 ऐप स्टार्ट होने से पहले ही प्रेफरेंस RAM में लोड हो जाएगा (Instagram जैसी स्पीड)
+  globalPrefs = await SharedPreferences.getInstance();
+
   runApp(const ViziaworkApp());
 }
 
@@ -51,7 +60,7 @@ class ViziaworkApp extends StatelessWidget {
 }
 
 // ---------------------------------------------------------
-// 0. SPLASH SCREEN (WITH AUTO-LOGIN & SHARED PREFERENCES)
+// 0. SPLASH SCREEN (INSTANT AUTO-LOGIN)
 // ---------------------------------------------------------
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -67,23 +76,30 @@ class _SplashScreenState extends State<SplashScreen> {
     _checkSavedUser();
   }
 
-  void _checkSavedUser() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? phone = prefs.getString('user_phone');
-    String? role = prefs.getString('user_role');
-
-    
+  void _checkSavedUser() {
+    // 🚀 अब कोई async/await नहीं, सीधे RAM से मिलीसेकंड में चेक होगा
+    String? phone = globalPrefs.getString('user_phone');
+    String? role = globalPrefs.getString('user_role');
 
     if (!mounted) return;
 
     if (phone != null && phone.isNotEmpty) {
       if (role == 'SHOPKEEPER') {
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => ShopkeeperDashboardScreen(shopPhone: phone)));
+        Navigator.pushReplacement(
+          context, 
+          MaterialPageRoute(builder: (context) => ShopkeeperDashboardScreen(shopPhone: phone))
+        );
       } else {
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => HomeScreen(userPhone: phone, isContractor: role == 'CONTRACTOR')));
+        Navigator.pushReplacement(
+          context, 
+          MaterialPageRoute(builder: (context) => HomeScreen(userPhone: phone, isContractor: role == 'CONTRACTOR'))
+        );
       }
     } else {
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const LoginScreen()));
+      Navigator.pushReplacement(
+        context, 
+        MaterialPageRoute(builder: (context) => const LoginScreen())
+      );
     }
   }
 
