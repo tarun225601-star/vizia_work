@@ -325,10 +325,6 @@ class PropertyDashboardScreen extends StatelessWidget {
       ),
       body: FirebaseAnimatedList(
         query: propertyRef,
-        defaultChild: const Center(child: CircularProgressIndicator(color: Color(0xFF10B981))),
-        emptyChild: const Center(
-          child: Text('हाल ही में कोई लिस्टिंग उपलब्ध नहीं है।', style: TextStyle(fontSize: 16, color: Colors.grey)),
-        ),
         itemBuilder: (context, snapshot, animation, index) {
           Map property = snapshot.value as Map;
           property['key'] = snapshot.key;
@@ -749,9 +745,9 @@ class AddPropertyAdminTab extends StatefulWidget {
 class _AddPropertyAdminTabState extends State<AddPropertyAdminTab> {
   final _titleController = TextEditingController();
   final _priceController = TextEditingController();
-  final _sizeController = TextEditingController(); // 📏 गज / फीट साइज के लिए
+  final _sizeController = TextEditingController();
   final _locationController = TextEditingController();
-  final _descController = TextEditingController();   // 📝 पूरी डिटेल / डिस्क्रिप्शन के लिए
+  final _descController = TextEditingController();
   
   final List<XFile> _selectedImages = [];
   final ImagePicker _picker = ImagePicker();
@@ -782,9 +778,9 @@ class _AddPropertyAdminTabState extends State<AddPropertyAdminTab> {
     await ref.push().set({
       'title': _titleController.text.trim(),
       'price': _priceController.text.trim(),
-      'size': _sizeController.text.trim(),         // 📏 साइज सेव होगा
+      'size': _sizeController.text.trim(),
       'location': _locationController.text.trim(),
-      'description': _descController.text.trim(), // 📝 डिटेल सेव होगी
+      'description': _descController.text.trim(),
       'images': imageStringList,
       'timestamp': ServerValue.timestamp,
     });
@@ -882,7 +878,6 @@ class InquiriesAdminTab extends StatelessWidget {
 
     return FirebaseAnimatedList(
       query: inquiryRef,
-      emptyChild: const Center(child: Text('कोई इंक्वायरी नहीं आई है।')),
       itemBuilder: (context, snapshot, animation, index) {
         Map inq = snapshot.value as Map;
 
