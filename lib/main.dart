@@ -346,7 +346,7 @@ class PropertyDashboardScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 📸 फोटो ग्रिड / टैप पर ज़ूम गैलरी
+                  // 📸 फोटो कार्ड / टैप करते ही ज़ूम गैलरी खुलेगी
                   InkWell(
                     onTap: () {
                       if (imageList.isNotEmpty) {
@@ -422,7 +422,7 @@ class PropertyDashboardScreen extends StatelessWidget {
                           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 4),
-                        // 📏 साइज (गज / फीट) दिखाना
+                        // 📏 साइज (गज / फीट)
                         if (property['size'] != null && property['size'].toString().isNotEmpty) ...[
                           Row(
                             children: [
@@ -449,7 +449,7 @@ class PropertyDashboardScreen extends StatelessWidget {
                           ],
                         ),
                         const SizedBox(height: 8),
-                        // 📝 प्रॉपर्टी के बारे में पूरी डिटेल (Description)
+                        // 📝 पूरी डिटेल (Description)
                         if (property['description'] != null && property['description'].toString().isNotEmpty) ...[
                           Text(
                             property['description'],
@@ -486,17 +486,64 @@ class PropertyDashboardScreen extends StatelessWidget {
     );
   }
 
+  // 🛡️ एकदम पक्का इमेज रेंडरर (Base64, Network, और File हैंडल करने के लिए)
   static Widget _buildImageWidget(String pathOrBase64) {
+    if (pathOrBase64.isEmpty) {
+      return Container(
+        height: 200,
+        color: Colors.grey.shade200,
+        child: const Center(child: Icon(Icons.apartment, size: 60, color: Colors.grey)),
+      );
+    }
+
     if (pathOrBase64.startsWith('http')) {
-      return Image.network(pathOrBase64, height: 200, width: double.infinity, fit: BoxFit.cover);
-    } else if (pathOrBase64.startsWith('/')) {
-      return Image.file(File(pathOrBase64), height: 200, width: double.infinity, fit: BoxFit.cover);
-    } else {
-      try {
-        return Image.memory(base64Decode(pathOrBase64), height: 200, width: double.infinity, fit: BoxFit.cover);
-      } catch (e) {
-        return Container(height: 200, color: Colors.grey.shade300, child: const Icon(Icons.broken_image));
+      return Image.network(
+        pathOrBase64,
+        height: 200,
+        width: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => Container(
+          height: 200,
+          color: Colors.grey.shade300,
+          child: const Icon(Icons.broken_image, size: 50, color: Colors.grey),
+        ),
+      );
+    }
+
+    if (pathOrBase64.startsWith('/') || pathOrBase64.startsWith('file://')) {
+      File imgFile = File(pathOrBase64.replaceFirst('file://', ''));
+      if (imgFile.existsSync()) {
+        return Image.file(
+          imgFile,
+          height: 200,
+          width: double.infinity,
+          fit: BoxFit.cover,
+        );
       }
+    }
+
+    try {
+      String cleanBase64 = pathOrBase64;
+      if (cleanBase64.contains(',')) {
+        cleanBase64 = cleanBase64.split(',').last;
+      }
+      return Image.memory(
+        base64Decode(cleanBase64.trim()),
+        height: 200,
+        width: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => Container(
+          height: 200,
+          color: Colors.grey.shade300,
+          child: const Center(child: Icon(Icons.broken_image, size: 50, color: Colors.grey)),
+        ),
+      );
+    } catch (e) {
+      return Container(
+        height: 200,
+        color: Colors.grey.shade300,
+        child: const Center(child: Icon(Icons.image_not_supported, size: 50, color: Colors.grey)),
+      );
     }
   }
 
@@ -733,7 +780,7 @@ class _AdminControlState extends State<AdminControl> {
 }
 
 // ---------------------------------------------------------
-// TAB 1: ADD PROPERTY (WITH SIZE & FULL DESCRIPTION)
+// TAB 1: ADD PROPERTY (GALLERY PICKER & BASE64 CONVERTER)
 // ---------------------------------------------------------
 class AddPropertyAdminTab extends StatefulWidget {
   const AddPropertyAdminTab({super.key});
@@ -767,6 +814,7 @@ class _AddPropertyAdminTabState extends State<AddPropertyAdminTab> {
       return;
     }
 
+    // 🚀 फोटो को सुरक्षित रूप से Base64 में बदलना ताकि डेटाबेस में फोटो सेव रहे
     List<String> imageStringList = [];
     for (var img in _selectedImages) {
       List<int> imageBytes = await img.readAsBytes();
@@ -796,7 +844,7 @@ class _AddPropertyAdminTabState extends State<AddPropertyAdminTab> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('प्रॉपर्टी, साइज और पूरी डिटेल लाइव हो गई!'), backgroundColor: Color(0xFF10B981)),
+        const SnackBar(content: Text('प्रॉपर्टी, साइज और फोटो सफलतापूर्वक लाइव हो गए!'), backgroundColor: Color(0xFF10B981)),
       );
     }
   }
@@ -812,17 +860,17 @@ class _AddPropertyAdminTabState extends State<AddPropertyAdminTab> {
           const SizedBox(height: 16),
           TextField(controller: _titleController, decoration: const InputDecoration(labelText: 'प्रॉपर्टी टाइटल (e.g. 3BHK Luxury Floor)', border: OutlineInputBorder())),
           const SizedBox(height: 12),
-          TextField(controller: _priceController, decoration: const InputDecoration(labelText: 'कीमत (e.g. ₹1.25 Cr या ₹45 Lakh)', border: OutlineInputBorder())),
+          TextField(controller: _priceController, decoration: const InputDecoration(labelText: 'कीमत (e.g. ₹1.25 Cr या ₹20 Lakh)', border: OutlineInputBorder())),
           const SizedBox(height: 12),
-          TextField(controller: _sizeController, decoration: const InputDecoration(labelText: 'साइज़ / क्षेत्रफल (e.g. 200 गज या 1500 Sq.Ft)', border: OutlineInputBorder())),
+          TextField(controller: _sizeController, decoration: const InputDecoration(labelText: 'साइज़ / क्षेत्रफल (e.g. 100 गज या 1500 Sq.Ft)', border: OutlineInputBorder())),
           const SizedBox(height: 12),
-          TextField(controller: _locationController, decoration: const InputDecoration(labelText: 'लोकेशन (e.g. Sector 15, Faridabad)', border: OutlineInputBorder())),
+          TextField(controller: _locationController, decoration: const InputDecoration(labelText: 'लोकेशन (e.g. Nehar Par, Faridabad)', border: OutlineInputBorder())),
           const SizedBox(height: 12),
           TextField(
             controller: _descController,
             maxLines: 3,
             decoration: const InputDecoration(
-              labelText: 'प्रॉपर्टी की पूरी डिटेल (जैसे: पार्क फेसिंग, रजिस्ट्री पक्की, लोन सुविधा आदि)',
+              labelText: 'प्रॉपर्टी की पूरी डिटेल (जैसे: near hospital school main highway)',
               border: OutlineInputBorder(),
             ),
           ),
