@@ -294,7 +294,7 @@ class PropertyDashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Query propertyRef = FirebaseDatabase.instance.ref().child('properties');
+    final DatabaseReference propertyRef = FirebaseDatabase.instance.ref().child('properties');
 
     return Scaffold(
       appBar: AppBar(
@@ -323,170 +323,218 @@ class PropertyDashboardScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: FirebaseAnimatedList(
-        query: propertyRef,
-        itemBuilder: (context, snapshot, animation, index) {
-          Map property = snapshot.value as Map;
-          property['key'] = snapshot.key;
-
-          List<String> imageList = [];
-          if (property['images'] != null) {
-            imageList = List<String>.from(property['images']);
+      body: StreamBuilder(
+        stream: propertyRef.onValue,
+        builder: (context, AsyncSnapshot<DatabaseEvent> snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator(color: Color(0xFF10B981)));
           }
 
-          return SizeTransition(
-            sizeFactor: animation,
-            child: Container(
-              margin: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, spreadRadius: 2)],
+          if (!snapshot.hasData || snapshot.data!.snapshot.value == null) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.domain_disabled_rounded, size: 70, color: Colors.grey),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'अभी कोई प्रॉपर्टी उपलब्ध नहीं है!',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'एडमिन पैनल से अपनी पहली Security Proof प्रॉपर्टी लाइव करें।',
+                      style: TextStyle(fontSize: 14, color: Colors.grey),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.push(context, MaterialPageRoute(builder: (context) => const AdminControl()));
+                      },
+                      icon: const Icon(Icons.add_home_rounded, color: Colors.white),
+                      label: const Text('प्रॉपर्टी जोड़ें (एडमिन)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF10B981),
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 📸 फोटो कार्ड / टैप करते ही ज़ूम गैलरी खुलेगी
-                  InkWell(
-                    onTap: () {
-                      if (imageList.isNotEmpty) {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => FullScreenGalleryScreen(imagePaths: imageList),
-                          ),
-                        );
-                      }
-                    },
-                    child: Stack(
-                      children: [
-                        ClipRRect(
-                          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                          child: imageList.isNotEmpty
-                              ? _buildImageWidget(imageList.first)
-                              : Container(
-                                  height: 200,
-                                  color: Colors.grey.shade200,
-                                  child: const Center(child: Icon(Icons.apartment, size: 60, color: Colors.grey)),
-                                ),
-                        ),
-                        Positioned(
-                          bottom: 12,
-                          right: 12,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(0.75),
-                              borderRadius: BorderRadius.circular(20),
+            );
+          }
+
+          return FirebaseAnimatedList(
+            query: propertyRef,
+            itemBuilder: (context, snapshotData, animation, index) {
+              Map property = snapshotData.value as Map;
+              property['key'] = snapshotData.key;
+
+              List<String> imageList = [];
+              if (property['images'] != null) {
+                imageList = List<String>.from(property['images']);
+              }
+
+              return SizeTransition(
+                sizeFactor: animation,
+                child: Container(
+                  margin: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, spreadRadius: 2)],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // 📸 फोटो कार्ड / टैप करते ही ज़ूम गैलरी खुलेगी
+                      InkWell(
+                        onTap: () {
+                          if (imageList.isNotEmpty) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => FullScreenGalleryScreen(imagePaths: imageList),
+                              ),
+                            );
+                          }
+                        },
+                        child: Stack(
+                          children: [
+                            ClipRRect(
+                              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                              child: imageList.isNotEmpty
+                                  ? _buildImageWidget(imageList.first)
+                                  : Container(
+                                      height: 200,
+                                      color: Colors.grey.shade200,
+                                      child: const Center(child: Icon(Icons.apartment, size: 60, color: Colors.grey)),
+                                    ),
                             ),
-                            child: Row(
+                            Positioned(
+                              bottom: 12,
+                              right: 12,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withOpacity(0.75),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.photo_library_rounded, color: Colors.white, size: 16),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      '${imageList.length} फोटो (देखने के लिए टैप करें)',
+                                      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Icon(Icons.photo_library_rounded, color: Colors.white, size: 16),
-                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF10B981).withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Text('Security Proof Verified', style: TextStyle(color: Color(0xFF10B981), fontSize: 11, fontWeight: FontWeight.bold)),
+                                ),
                                 Text(
-                                  '${imageList.length} फोटो (देखने के लिए टैप करें)',
-                                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                                  property['price'] ?? '',
+                                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
                                 ),
                               ],
                             ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF10B981).withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Text('Security Proof Verified', style: TextStyle(color: Color(0xFF10B981), fontSize: 11, fontWeight: FontWeight.bold)),
-                            ),
+                            const SizedBox(height: 10),
                             Text(
-                              property['price'] ?? '',
-                              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
+                              property['title'] ?? 'Property Title',
+                              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                             ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          property['title'] ?? 'Property Title',
-                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 4),
-                        // 📏 साइज (गज / फीट)
-                        if (property['size'] != null && property['size'].toString().isNotEmpty) ...[
-                          Row(
-                            children: [
-                              const Icon(Icons.straighten_rounded, size: 16, color: Color(0xFF10B981)),
-                              const SizedBox(width: 4),
-                              Text(
-                                'साइज़: ${property['size']}',
-                                style: const TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.bold, fontSize: 13),
+                            const SizedBox(height: 4),
+                            // 📏 साइज (गज / फीट)
+                            if (property['size'] != null && property['size'].toString().isNotEmpty) ...[
+                              Row(
+                                children: [
+                                  const Icon(Icons.straighten_rounded, size: 16, color: Color(0xFF10B981)),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'साइज़: ${property['size']}',
+                                    style: const TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.bold, fontSize: 13),
+                                  ),
+                                ],
                               ),
+                              const SizedBox(height: 4),
                             ],
-                          ),
-                          const SizedBox(height: 4),
-                        ],
-                        Row(
-                          children: [
-                            const Icon(Icons.location_on_rounded, size: 16, color: Colors.grey),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: Text(
-                                property['location'] ?? '',
-                                style: const TextStyle(color: Colors.grey, fontSize: 13),
+                            Row(
+                              children: [
+                                const Icon(Icons.location_on_rounded, size: 16, color: Colors.grey),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    property['location'] ?? '',
+                                    style: const TextStyle(color: Colors.grey, fontSize: 13),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            // 📝 पूरी डिटेल (Description)
+                            if (property['description'] != null && property['description'].toString().isNotEmpty) ...[
+                              Text(
+                                property['description'],
+                                style: const TextStyle(color: Colors.black87, fontSize: 13, height: 1.3),
+                                maxLines: 3,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 12),
+                            ],
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton.icon(
+                                onPressed: () {
+                                  _showInquiryBottomSheet(context, property['title'] ?? 'Property', userPhone);
+                                },
+                                icon: const Icon(Icons.send_rounded, size: 18, color: Colors.white),
+                                label: const Text('इंक्वायरी भेजें', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF0F172A),
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 8),
-                        // 📝 पूरी डिटेल (Description)
-                        if (property['description'] != null && property['description'].toString().isNotEmpty) ...[
-                          Text(
-                            property['description'],
-                            style: const TextStyle(color: Colors.black87, fontSize: 13, height: 1.3),
-                            maxLines: 3,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 12),
-                        ],
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            onPressed: () {
-                              _showInquiryBottomSheet(context, property['title'] ?? 'Property', userPhone);
-                            },
-                            icon: const Icon(Icons.send_rounded, size: 18, color: Colors.white),
-                            label: const Text('इंक्वायरी भेजें', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF0F172A),
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
+                ),
+              );
+            },
           );
         },
       ),
     );
   }
 
-  // 🛡️ एकदम पक्का इमेज रेंडरर (Base64, Network, और File हैंडल करने के लिए)
+  // 🛡️ सुरक्षित इमेज रेंडरर (क्रैश-फ्री)
   static Widget _buildImageWidget(String pathOrBase64) {
     if (pathOrBase64.isEmpty) {
       return Container(
@@ -673,10 +721,34 @@ class _FullScreenGalleryScreenState extends State<FullScreenGalleryScreen> {
           return Center(
             child: InteractiveViewer(
               panEnabled: true,
-              boundaryMargin: const EdgeInsets.all(20),
-              minScale: 0.5,
-              maxScale: 4.0,
-              child: PropertyDashboardScreen._buildImageWidget(widget.imagePaths[index]),
+              boundaryMargin: const EdgeInsets.all(0),
+              minScale: 1.0,
+              maxScale: 5.0,
+              child: SizedBox.expand(
+                child: FittedBox(
+                  fit: BoxFit.contain,
+                  child: Builder(
+                    builder: (context) {
+                      String pathOrBase64 = widget.imagePaths[index];
+                      if (pathOrBase64.startsWith('http')) {
+                        return Image.network(pathOrBase64);
+                      } else if (pathOrBase64.startsWith('/') || pathOrBase64.startsWith('file://')) {
+                        return Image.file(File(pathOrBase64.replaceFirst('file://', '')));
+                      } else {
+                        try {
+                          String cleanBase64 = pathOrBase64;
+                          if (cleanBase64.contains(',')) {
+                            cleanBase64 = cleanBase64.split(',').last;
+                          }
+                          return Image.memory(base64Decode(cleanBase64.trim()));
+                        } catch (e) {
+                          return const Icon(Icons.broken_image, color: Colors.white, size: 50);
+                        }
+                      }
+                    },
+                  ),
+                ),
+              ),
             ),
           );
         },
@@ -780,7 +852,7 @@ class _AdminControlState extends State<AdminControl> {
 }
 
 // ---------------------------------------------------------
-// TAB 1: ADD PROPERTY (GALLERY PICKER & BASE64 CONVERTER)
+// TAB 1: ADD PROPERTY (WITH AUTO COMPRESSION)
 // ---------------------------------------------------------
 class AddPropertyAdminTab extends StatefulWidget {
   const AddPropertyAdminTab({super.key});
@@ -799,8 +871,13 @@ class _AddPropertyAdminTabState extends State<AddPropertyAdminTab> {
   final List<XFile> _selectedImages = [];
   final ImagePicker _picker = ImagePicker();
 
+  // 📸 ऑटो-कंप्रेशन (ताकि रैम पर लोड न पड़े और ऐप क्रैश न हो)
   Future<void> _pickImagesFromGallery() async {
-    final List<XFile> images = await _picker.pickMultiImage();
+    final List<XFile> images = await _picker.pickMultiImage(
+      imageQuality: 30,
+      maxWidth: 500,
+      maxHeight: 500,
+    );
     if (images.isNotEmpty) {
       setState(() {
         _selectedImages.addAll(images);
@@ -814,7 +891,6 @@ class _AddPropertyAdminTabState extends State<AddPropertyAdminTab> {
       return;
     }
 
-    // 🚀 फोटो को सुरक्षित रूप से Base64 में बदलना ताकि डेटाबेस में फोटो सेव रहे
     List<String> imageStringList = [];
     for (var img in _selectedImages) {
       List<int> imageBytes = await img.readAsBytes();
@@ -856,7 +932,7 @@ class _AddPropertyAdminTabState extends State<AddPropertyAdminTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text('नई Property जोड़ें (साइज और पूरी डिटेल के साथ)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text('नई Property जोड़ें (ऑटो-कंप्रेस्ड फोटो)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
           TextField(controller: _titleController, decoration: const InputDecoration(labelText: 'प्रॉपर्टी टाइटल (e.g. 3BHK Luxury Floor)', border: OutlineInputBorder())),
           const SizedBox(height: 12),
@@ -922,7 +998,7 @@ class InquiriesAdminTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Query inquiryRef = FirebaseDatabase.instance.ref().child('inquiries');
+    Query inquiryRef = FirebaseDatabase.instance.ref().child('inquiries');
 
     return FirebaseAnimatedList(
       query: inquiryRef,
