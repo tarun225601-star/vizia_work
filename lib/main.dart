@@ -546,7 +546,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         bottom: TabBar(
           controller: _tabController,
           labelColor: const Color(0xFF10B981),
-          unselectedColor: Colors.grey,
+          unselectedLabelColor: Colors.grey
           indicatorColor: const Color(0xFF10B981),
           tabs: const [
             Tab(icon: Icon(Icons.engineering), text: 'कारीगर व ठेकेदार'),
