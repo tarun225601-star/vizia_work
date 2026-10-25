@@ -1,17 +1,20 @@
 import 'dart:convert';
-import 'dart:io';
+import 'dart:math';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:firebase_database/ui/firebase_animated_list.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+// 🚀 RAM में डेटा रखने के लिए ग्लोबल वेरिएबल (जीरो लेटेसी के लिए)
 late SharedPreferences globalPrefs;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
+  
   await Firebase.initializeApp(
     options: const FirebaseOptions(
       apiKey: "AIzaSyDummyKeyForViziawork",
@@ -23,34 +26,29 @@ void main() async {
   );
 
   globalPrefs = await SharedPreferences.getInstance();
-
-  runApp(const EndoWorkApp());
+  runApp(const ViziaworkApp());
 }
 
-class EndoWorkApp extends StatelessWidget {
-  const EndoWorkApp({super.key});
+class ViziaworkApp extends StatelessWidget {
+  const ViziaworkApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Endo Work',
+      title: 'Viziawork',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.light,
-        scaffoldBackgroundColor: const Color(0xFFF8FAFC),
-        primaryColor: const Color(0xFF0F172A),
-        colorScheme: ColorScheme.fromSwatch().copyWith(
-          primary: const Color(0xFF0F172A),
-          secondary: const Color(0xFF10B981),
-        ),
+        scaffoldBackgroundColor: const Color(0xFFF9FAFB),
+        primaryColor: const Color(0xFF10B981),
         fontFamily: 'Roboto',
         appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF0F172A),
-          foregroundColor: Colors.white,
-          elevation: 2,
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.black,
+          elevation: 1,
           centerTitle: false,
-          titleTextStyle: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-          iconTheme: IconThemeData(color: Colors.white),
+          titleTextStyle: TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold),
+          iconTheme: IconThemeData(color: Colors.black),
         ),
       ),
       home: const SplashScreen(),
@@ -59,7 +57,7 @@ class EndoWorkApp extends StatelessWidget {
 }
 
 // ---------------------------------------------------------
-// 0. SPLASH SCREEN
+// 0. SPLASH SCREEN (INSTANT AUTO-LOGIN)
 // ---------------------------------------------------------
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -77,18 +75,26 @@ class _SplashScreenState extends State<SplashScreen> {
 
   void _checkSavedUser() {
     String? phone = globalPrefs.getString('user_phone');
+    String? role = globalPrefs.getString('user_role');
 
     if (!mounted) return;
 
     if (phone != null && phone.isNotEmpty) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => PropertyDashboardScreen(userPhone: phone)),
-      );
+      if (role == 'SHOPKEEPER') {
+        Navigator.pushReplacement(
+          context, 
+          MaterialPageRoute(builder: (context) => ShopkeeperDashboardScreen(shopPhone: phone))
+        );
+      } else {
+        Navigator.pushReplacement(
+          context, 
+          MaterialPageRoute(builder: (context) => HomeScreen(userPhone: phone, isContractor: role == 'CONTRACTOR'))
+        );
+      }
     } else {
       Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const LoginScreen()),
+        context, 
+        MaterialPageRoute(builder: (context) => const LoginScreen())
       );
     }
   }
@@ -96,21 +102,8 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return const Scaffold(
-      backgroundColor: Color(0xFF0F172A),
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.domain_rounded, size: 70, color: Color(0xFF10B981)),
-            SizedBox(height: 16),
-            Text(
-              'ENDO WORK',
-              style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold, letterSpacing: 2),
-            ),
-            SizedBox(height: 24),
-            CircularProgressIndicator(color: Color(0xFF10B981)),
-          ],
-        ),
+        child: CircularProgressIndicator(color: Color(0xFF10B981)),
       ),
     );
   }
@@ -138,7 +131,8 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    await globalPrefs.setString('user_phone', phone);
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString('user_phone', phone);
 
     if (mounted) {
       Navigator.push(
@@ -163,23 +157,23 @@ class _LoginScreenState extends State<LoginScreen> {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: Colors.white,
-                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 20, spreadRadius: 5)],
+                  boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.2), blurRadius: 20, spreadRadius: 5)],
                 ),
-                child: const Icon(Icons.apartment_rounded, size: 50, color: Color(0xFF0F172A)),
+                child: const Icon(Icons.build_circle_rounded, size: 50, color: Color(0xFF10B981)),
               ),
               const SizedBox(height: 24),
               const Text(
-                'Endo Work',
+                'Viziawork',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 36, fontWeight: FontWeight.w900, color: Color(0xFF0F172A), letterSpacing: -1),
+                style: TextStyle(fontSize: 38, fontWeight: FontWeight.w900, color: Colors.black, letterSpacing: -1),
               ),
               const SizedBox(height: 8),
               const Text(
-                'Security Proof Verified Properties & Land Deals',
+                '100% फ्री कारीगर खोजें & मटीरियल बिल पर कैशबैक पाएं',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 13, color: Colors.grey, fontWeight: FontWeight.w600),
+                style: TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.w500),
               ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 50),
               TextField(
                 controller: _phoneController,
                 keyboardType: TextInputType.phone,
@@ -201,7 +195,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 18),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  backgroundColor: const Color(0xFF0F172A),
+                  backgroundColor: const Color(0xFF10B981),
                 ),
                 child: const Text('OTP भेजें', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
               ),
@@ -214,7 +208,7 @@ class _LoginScreenState extends State<LoginScreen> {
 }
 
 // ---------------------------------------------------------
-// 2. OTP VERIFICATION SCREEN
+// 2. OTP VERIFICATION SCREEN (WITH BACK BUTTON)
 // ---------------------------------------------------------
 class OtpVerificationScreen extends StatefulWidget {
   final String phone;
@@ -235,7 +229,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     }
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) => PropertyDashboardScreen(userPhone: widget.phone)),
+      MaterialPageRoute(builder: (context) => RoleSelectionScreen(phone: widget.phone)),
     );
   }
 
@@ -286,432 +280,165 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
 }
 
 // ---------------------------------------------------------
-// 3. MAIN USER DASHBOARD (CRASH-PROOF FEED)
+// ROLE SELECTION SCREEN & ADMIN CONTROL (ALL-IN-ONE)
 // ---------------------------------------------------------
-class PropertyDashboardScreen extends StatelessWidget {
-  final String userPhone;
-  const PropertyDashboardScreen({super.key, required this.userPhone});
+class RoleSelectionScreen extends StatelessWidget {
+  final String phone;
+  const RoleSelectionScreen({super.key, required this.phone});
+
+  void _saveRole(String role) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString('user_role', role);
+  }
 
   @override
   Widget build(BuildContext context) {
-    final DatabaseReference propertyRef = FirebaseDatabase.instance.ref().child('properties');
-
     return Scaffold(
       appBar: AppBar(
-        title: const Row(
+        title: const Text('Viziawork - मुख्य मेनू'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          onPressed: () async {
+            SharedPreferences prefs = await SharedPreferences.getInstance();
+            await prefs.clear();
+            if (context.mounted) {
+              Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const LoginScreen()));
+            }
+          },
+        ),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Icon(Icons.verified_user_rounded, color: Color(0xFF10B981), size: 22),
-            SizedBox(width: 8),
-            Text('Endo Work - Properties'),
+            const Text(
+              'आप Viziawork का उपयोग कैसे करना चाहते हैं?',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 30),
+            
+            // 1. ग्राहक / काम कराने वाला
+            _buildRoleCard(
+              context,
+              title: '1. मुझे काम कराना है / सामान खरीदना है',
+              subtitle: '100% मुफ़्त मिस्त्री खोजें & मटीरियल बिल पर 1% कैशबैक पाएं',
+              icon: Icons.person_search_rounded,
+              iconColor: const Color(0xFF10B981),
+              onTap: () {
+                _saveRole('USER');
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => HomeScreen(userPhone: phone, isContractor: false)),
+                );
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // 2. कारीगर / ठेकेदार
+            _buildRoleCard(
+              context,
+              title: '2. मैं कारीगर / ठेकेदार / बिल्डर हूँ',
+              subtitle: 'मुफ़्त रजिस्ट्रेशन करें, नया काम पाएं और 0.5% मटीरियल बोनस कमाएं',
+              icon: Icons.engineering_rounded,
+              iconColor: const Color(0xFF10B981),
+              onTap: () {
+                _saveRole('CONTRACTOR');
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => RegisterWorkerScreen(workerPhone: phone)),
+                );
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // 3. मटीरियल दुकान मालिक
+            _buildRoleCard(
+              context,
+              title: '3. मैं मटीरियल दुकान मालिक हूँ',
+              subtitle: 'अपनी दुकान लिस्ट करें, ग्राहक पाएं & बिल कोड वेरिफाई करें',
+              icon: Icons.storefront_rounded,
+              iconColor: const Color(0xFF10B981),
+              onTap: () {
+                _saveRole('SHOPKEEPER');
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => ShopkeeperDashboardScreen(shopPhone: phone)),
+                );
+              },
+            ),
+            const SizedBox(height: 20),
+            const Divider(),
+            const SizedBox(height: 12),
+
+            // 👑 4. एडमिन कंट्रोल (पासकोड Tarun#1)
+            _buildRoleCard(
+              context,
+              title: '4. एडमिन कंट्रोल (Admin Control)',
+              subtitle: 'दुकानें व कारीगर मैनेज करें, अप्रूव/डिलीट व लॉक लगाएं',
+              icon: Icons.admin_panel_settings_rounded,
+              iconColor: const Color(0xFF0F172A),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const AdminControl()),
+                );
+              },
+            ),
           ],
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.admin_panel_settings_rounded, color: Colors.white70),
-            onPressed: () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => const AdminControl()));
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout_rounded, color: Colors.redAccent),
-            onPressed: () async {
-              await globalPrefs.clear();
-              if (context.mounted) {
-                Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const LoginScreen()));
-              }
-            },
-          ),
-        ],
       ),
-      body: StreamBuilder(
-        stream: propertyRef.onValue,
-        builder: (context, AsyncSnapshot<DatabaseEvent> snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: Color(0xFF10B981)));
-          }
+    );
+  }
 
-          if (!snapshot.hasData || snapshot.data!.snapshot.value == null) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.domain_disabled_rounded, size: 70, color: Colors.grey),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'अभी कोई प्रॉपर्टी उपलब्ध नहीं है!',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'एडमिन पैनल से अपनी पहली Security Proof प्रॉपर्टी लाइव करें।',
-                      style: TextStyle(fontSize: 14, color: Colors.grey),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 24),
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.push(context, MaterialPageRoute(builder: (context) => const AdminControl()));
-                      },
-                      icon: const Icon(Icons.add_home_rounded, color: Colors.white),
-                      label: const Text('प्रॉपर्टी जोड़ें (एडमिन)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF10B981),
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                    ),
-                  ],
-                ),
+  Widget _buildRoleCard(
+    BuildContext context, {
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color iconColor,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(20),
+      elevation: 2,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(color: iconColor.withOpacity(0.1), shape: BoxShape.circle),
+                child: Icon(icon, color: iconColor, size: 30),
               ),
-            );
-          }
-
-          Map<dynamic, dynamic> map = snapshot.data!.snapshot.value as Map<dynamic, dynamic>;
-          List<Map<String, dynamic>> propertyList = [];
-          map.forEach((key, value) {
-            Map<String, dynamic> item = Map<String, dynamic>.from(value);
-            item['key'] = key;
-            propertyList.add(item);
-          });
-
-          return ListView.builder(
-            itemCount: propertyList.length,
-            itemBuilder: (context, index) {
-              var property = propertyList[index];
-              List<String> imageList = [];
-              if (property['images'] != null) {
-                imageList = List<String>.from(property['images']);
-              }
-
-              return Container(
-                margin: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, spreadRadius: 2)],
-                ),
+              const SizedBox(width: 16),
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    InkWell(
-                      onTap: () {
-                        if (imageList.isNotEmpty) {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => FullScreenGalleryScreen(imagePaths: imageList),
-                            ),
-                          );
-                        }
-                      },
-                      child: Stack(
-                        children: [
-                          ClipRRect(
-                            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                            child: imageList.isNotEmpty
-                                ? _buildSafeImageWidget(imageList.first)
-                                : Container(
-                                    height: 200,
-                                    color: Colors.grey.shade200,
-                                    child: const Center(child: Icon(Icons.apartment, size: 60, color: Colors.grey)),
-                                  ),
-                          ),
-                          Positioned(
-                            bottom: 12,
-                            right: 12,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: Colors.black.withOpacity(0.75),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.photo_library_rounded, color: Colors.white, size: 16),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    '${imageList.length} फोटो (देखने के लिए टैप करें)',
-                                    style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF10B981).withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: const Text('Security Proof Verified', style: TextStyle(color: Color(0xFF10B981), fontSize: 11, fontWeight: FontWeight.bold)),
-                              ),
-                              Text(
-                                property['price'] ?? '',
-                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          Text(
-                            property['title'] ?? 'Property Title',
-                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 4),
-                          if (property['size'] != null && property['size'].toString().isNotEmpty) ...[
-                            Row(
-                              children: [
-                                const Icon(Icons.straighten_rounded, size: 16, color: Color(0xFF10B981)),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'साइज़: ${property['size']}',
-                                  style: const TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.bold, fontSize: 13),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                          ],
-                          Row(
-                            children: [
-                              const Icon(Icons.location_on_rounded, size: 16, color: Colors.grey),
-                              const SizedBox(width: 4),
-                              Expanded(
-                                child: Text(
-                                  property['location'] ?? '',
-                                  style: const TextStyle(color: Colors.grey, fontSize: 13),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          if (property['description'] != null && property['description'].toString().isNotEmpty) ...[
-                            Text(
-                              property['description'],
-                              style: const TextStyle(color: Colors.black87, fontSize: 13, height: 1.3),
-                              maxLines: 3,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 12),
-                          ],
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton.icon(
-                              onPressed: () {
-                                _showInquiryBottomSheet(context, property['title'] ?? 'Property', userPhone);
-                              },
-                              icon: const Icon(Icons.send_rounded, size: 18, color: Colors.white),
-                              label: const Text('इंक्वायरी भेजें', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF0F172A),
-                                padding: const EdgeInsets.symmetric(vertical: 12),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 4),
+                    Text(subtitle, style: const TextStyle(fontSize: 12, color: Colors.grey, height: 1.3)),
                   ],
                 ),
-              );
-            },
-          );
-        },
-      ),
-    );
-  }
-
-  // 🛡️ RAM-Safe Image Decoder (ResizeImage लागू किया ताकि क्रैश न हो)
-  static Widget _buildSafeImageWidget(String pathOrBase64) {
-    if (pathOrBase64.isEmpty) {
-      return Container(height: 200, color: Colors.grey.shade200, child: const Icon(Icons.apartment, size: 50));
-    }
-
-    try {
-      String cleanBase64 = pathOrBase64.contains(',') ? pathOrBase64.split(',').last : pathOrBase64;
-      Uint8List bytes = base64Decode(cleanBase64.trim());
-      
-      return Image(
-        image: ResizeImage(MemoryImage(bytes), width: 400), // RAM बफर को सीमित रखता है
-        height: 200,
-        width: double.infinity,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) => Container(
-          height: 200,
-          color: Colors.grey.shade300,
-          child: const Icon(Icons.broken_image, size: 50, color: Colors.grey),
-        ),
-      );
-    } catch (e) {
-      return Container(
-        height: 200,
-        color: Colors.grey.shade300,
-        child: const Icon(Icons.image_not_supported, size: 50, color: Colors.grey),
-      );
-    }
-  }
-
-  static void _showInquiryBottomSheet(BuildContext context, String propertyTitle, String defaultPhone) {
-    final nameController = TextEditingController();
-    final phoneController = TextEditingController(text: defaultPhone);
-    final addressController = TextEditingController();
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (context) {
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-            left: 20,
-            right: 20,
-            top: 20,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Inquiry for: $propertyTitle', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF10B981))),
-              const SizedBox(height: 16),
-              TextField(
-                controller: nameController,
-                decoration: InputDecoration(
-                  labelText: 'आपका नाम',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                ),
               ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: phoneController,
-                keyboardType: TextInputType.phone,
-                decoration: InputDecoration(
-                  labelText: 'मोबाइल नंबर',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: addressController,
-                decoration: InputDecoration(
-                  labelText: 'आपका पता / लोकेशन (Address)',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    if (nameController.text.isEmpty || phoneController.text.isEmpty || addressController.text.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('कृपया नाम, मोबाइल नंबर और पता पूरा भरें')));
-                      return;
-                    }
-
-                    DatabaseReference ref = FirebaseDatabase.instance.ref().child('inquiries');
-                    await ref.push().set({
-                      'property': propertyTitle,
-                      'name': nameController.text.trim(),
-                      'phone': phoneController.text.trim(),
-                      'address': addressController.text.trim(),
-                      'timestamp': ServerValue.timestamp,
-                    });
-
-                    if (context.mounted) {
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('आपकी इंक्वायरी सफलतापूर्वक एडमिन को भेज दी गई है!'), backgroundColor: Color(0xFF10B981)),
-                      );
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF10B981),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: const Text('सबमिट करें', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                ),
-              ),
+              const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
             ],
           ),
-        );
-      },
-    );
-  }
-}
-
-// ---------------------------------------------------------
-// 📸 FULL-SCREEN GALLERY
-// ---------------------------------------------------------
-class FullScreenGalleryScreen extends StatefulWidget {
-  final List<String> imagePaths;
-  const FullScreenGalleryScreen({super.key, required this.imagePaths});
-
-  @override
-  State<FullScreenGalleryScreen> createState() => _FullScreenGalleryScreenState();
-}
-
-class _FullScreenGalleryScreenState extends State<FullScreenGalleryScreen> {
-  int currentIndex = 0;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        foregroundColor: Colors.white,
-        title: Text('फोटो ${currentIndex + 1} / ${widget.imagePaths.length}'),
-      ),
-      body: PageView.builder(
-        itemCount: widget.imagePaths.length,
-        onPageChanged: (index) {
-          setState(() {
-            currentIndex = index;
-          });
-        },
-        itemBuilder: (context, index) {
-          return Center(
-            child: InteractiveViewer(
-              panEnabled: true,
-              minScale: 1.0,
-              maxScale: 4.0,
-              child: Builder(
-                builder: (context) {
-                  try {
-                    String cleanBase64 = widget.imagePaths[index].contains(',') 
-                        ? widget.imagePaths[index].split(',').last 
-                        : widget.imagePaths[index];
-                    Uint8List bytes = base64Decode(cleanBase64.trim());
-                    return Image.memory(bytes, fit: BoxFit.contain);
-                  } catch (e) {
-                    return const Icon(Icons.broken_image, color: Colors.white, size: 50);
-                  }
-                },
-              ),
-            ),
-          );
-        },
+        ),
       ),
     );
   }
 }
 
 // ---------------------------------------------------------
-// 4. ADMIN CONTROL PANEL (Passcode: Tarun#1)
+// ADMIN CONTROL LOGIN & PASSCODE (Tarun#1)
 // ---------------------------------------------------------
 class AdminControl extends StatefulWidget {
   const AdminControl({super.key});
@@ -732,7 +459,10 @@ class _AdminControlState extends State<AdminControl> {
       });
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('गलत सीक्रेट कोड! एक्सेस अस्वीकृत।'), backgroundColor: Colors.red),
+        const SnackBar(
+          content: Text('गलत सीक्रेट कोड! एक्सेस अस्वीकृत।'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
@@ -742,27 +472,48 @@ class _AdminControlState extends State<AdminControl> {
     if (!_isAuthenticated) {
       return Scaffold(
         backgroundColor: const Color(0xFF0F172A),
-        appBar: AppBar(title: const Text('Endo Work एडमिन लॉगिन')),
+        appBar: AppBar(
+          title: const Text('Viziawork एडमिन लॉगिन'),
+          backgroundColor: const Color(0xFF1E293B),
+          foregroundColor: Colors.white,
+        ),
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(24.0),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.admin_panel_settings, size: 70, color: Color(0xFF10B981)),
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10B981).withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.admin_panel_settings, size: 70, color: Color(0xFF10B981)),
+                ),
                 const SizedBox(height: 24),
-                const Text('सुपर एडमिन एक्सेस', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
+                const Text(
+                  'सुपर एडमिन एक्सेस',
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'कंट्रोल पैनल खोलने के लिए सीक्रेट कोड दर्ज करें',
+                  style: TextStyle(color: Colors.white60, fontSize: 13),
+                ),
                 const SizedBox(height: 30),
                 TextField(
                   controller: _passcodeController,
                   obscureText: true,
-                  style: const TextStyle(color: Colors.white, fontSize: 20),
+                  style: const TextStyle(color: Colors.white, fontSize: 20, letterSpacing: 4),
                   decoration: InputDecoration(
                     labelText: 'सीक्रेट कोड दर्ज करें',
                     labelStyle: const TextStyle(color: Colors.white70),
                     filled: true,
                     fillColor: const Color(0xFF1E293B),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Colors.white24)),
+                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF10B981), width: 2)),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -770,8 +521,12 @@ class _AdminControlState extends State<AdminControl> {
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: _verifyPasscode,
-                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981), padding: const EdgeInsets.symmetric(vertical: 16)),
-                    child: const Text('अनलॉक पैनल', style: TextStyle(fontSize: 18, color: Colors.white)),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      backgroundColor: const Color(0xFF10B981),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                    child: const Text('अनलॉक एडमिन पैनल', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
                   ),
                 ),
               ],
@@ -781,220 +536,316 @@ class _AdminControlState extends State<AdminControl> {
       );
     }
 
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Admin Desk (Endo Work)'),
-          bottom: const TabBar(
-            tabs: [
-              Tab(icon: Icon(Icons.add_photo_alternate_rounded), text: 'Add Property'),
-              Tab(icon: Icon(Icons.inbox_rounded), text: 'Inquiries'),
-            ],
-          ),
-        ),
-        body: const TabBarView(
-          children: [
-            AddPropertyAdminTab(),
-            InquiriesAdminTab(),
-          ],
-        ),
-      ),
-    );
+    return const AdminMainDashboard();
   }
 }
 
 // ---------------------------------------------------------
-// TAB 1: ADD PROPERTY (MAX 4 HEAVY COMPRESSED IMAGES)
+// ADMIN DASHBOARD CONTENT (SHOPS & WORKERS MANAGEMENT)
 // ---------------------------------------------------------
-class AddPropertyAdminTab extends StatefulWidget {
-  const AddPropertyAdminTab({super.key});
+class AdminMainDashboard extends StatefulWidget {
+  const AdminMainDashboard({super.key});
 
   @override
-  State<AddPropertyAdminTab> createState() => _AddPropertyAdminTabState();
+  State<AdminMainDashboard> createState() => _AdminMainDashboardState();
 }
 
-class _AddPropertyAdminTabState extends State<AddPropertyAdminTab> {
-  final _titleController = TextEditingController();
-  final _priceController = TextEditingController();
-  final _sizeController = TextEditingController();
-  final _locationController = TextEditingController();
-  final _descController = TextEditingController();
-  
-  final List<XFile> _selectedImages = [];
-  final ImagePicker _picker = ImagePicker();
+class _AdminMainDashboardState extends State<AdminMainDashboard> {
+  final DatabaseReference _dbRef = FirebaseDatabase.instance.ref();
+  String _selectedCity = "All";
+  final List<String> _cities = ["All", "Faridabad", "Gurugram", "Delhi", "Noida", "Ghaziabad"];
+  int _currentTabIndex = 0;
 
-  Future<void> _pickImagesFromGallery() async {
-    final List<XFile> images = await _picker.pickMultiImage(
-      imageQuality: 20, // अत्यधिक कंप्रेशन (क्रैश रोकने के लिए)
-      maxWidth: 300,
-      maxHeight: 300,
-    );
-    if (images.isNotEmpty) {
-      setState(() {
-        _selectedImages.addAll(images.take(4)); // अधिकतम 4 फोटो ताकि डेटाबेस लोड न हो
-      });
-    }
-  }
-
-  void _addProperty() async {
-    if (_titleController.text.isEmpty || _priceController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('कृपया टाइटल और रेट भरें')));
-      return;
-    }
-
-    List<String> imageStringList = [];
-    for (var img in _selectedImages) {
-      List<int> imageBytes = await img.readAsBytes();
-      String base64Image = base64Encode(imageBytes);
-      imageStringList.add(base64Image);
-    }
-
-    DatabaseReference ref = FirebaseDatabase.instance.ref().child('properties');
-    await ref.push().set({
-      'title': _titleController.text.trim(),
-      'price': _priceController.text.trim(),
-      'size': _sizeController.text.trim(),
-      'location': _locationController.text.trim(),
-      'description': _descController.text.trim(),
-      'images': imageStringList,
-      'timestamp': ServerValue.timestamp,
+  void _approveShop(String shopPhone) async {
+    await _dbRef.child('shops').child(shopPhone).update({
+      'isApproved': true,
+      'status': 'ACTIVE',
     });
-
-    _titleController.clear();
-    _priceController.clear();
-    _sizeController.clear();
-    _locationController.clear();
-    _descController.clear();
-    setState(() {
-      _selectedImages.clear();
-    });
-
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('प्रॉपर्टी सफलतापूर्वक लाइव हो गई!'), backgroundColor: Color(0xFF10B981)),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('दुकान अप्रूव कर दी गई है!')));
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Text('नई Property जोड़ें', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 16),
-          TextField(controller: _titleController, decoration: const InputDecoration(labelText: 'प्रॉपर्टी टाइटल (e.g. 3BHK Luxury Floor)', border: OutlineInputBorder())),
-          const SizedBox(height: 12),
-          TextField(controller: _priceController, decoration: const InputDecoration(labelText: 'कीमत (e.g. ₹1.25 Cr या ₹20 Lakh)', border: OutlineInputBorder())),
-          const SizedBox(height: 12),
-          TextField(controller: _sizeController, decoration: const InputDecoration(labelText: 'साइज़ / क्षेत्रफल (e.g. 100 गज या 1500 Sq.Ft)', border: OutlineInputBorder())),
-          const SizedBox(height: 12),
-          TextField(controller: _locationController, decoration: const InputDecoration(labelText: 'लोकेशन (e.g. Nehar Par, Faridabad)', border: OutlineInputBorder())),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _descController,
-            maxLines: 3,
-            decoration: const InputDecoration(
-              labelText: 'प्रॉपर्टी की पूरी डिटेल',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 16),
-          
-          ElevatedButton.icon(
-            onPressed: _pickImagesFromGallery,
-            icon: const Icon(Icons.photo_library_rounded, color: Colors.white),
-            label: Text('गैलरी से फोटो चुनें (Max 4) (${_selectedImages.length} चुने गए)', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981), padding: const EdgeInsets.symmetric(vertical: 14)),
-          ),
-          const SizedBox(height: 12),
-
-          if (_selectedImages.isNotEmpty)
-            SizedBox(
-              height: 100,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                itemCount: _selectedImages.length,
-                itemBuilder: (context, index) {
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8.0),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.file(File(_selectedImages[index].path), width: 100, height: 100, fit: BoxFit.cover),
-                    ),
-                  );
-                },
-              ),
-            ),
-
-          const SizedBox(height: 20),
+  void _deleteShop(String shopPhone, String shopName) async {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('$shopName डिलीट करें?'),
+        content: const Text('क्या आप वाकई इस दुकान को हमेशा के लिए हटाना चाहते हैं?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('रद्द करें')),
           ElevatedButton(
-            onPressed: _addProperty,
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0F172A), padding: const EdgeInsets.symmetric(vertical: 16)),
-            child: const Text('प्रॉपर्टी लाइव करें', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () async {
+              await _dbRef.child('shops').child(shopPhone).remove();
+              if (context.mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('दुकान डिलीट कर दी गई है')));
+              }
+            },
+            child: const Text('डिलीट करें', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
     );
   }
-}
 
-// ---------------------------------------------------------
-// TAB 2: INQUIRIES LIST (ADMIN ONLY)
-// ---------------------------------------------------------
-class InquiriesAdminTab extends StatelessWidget {
-  const InquiriesAdminTab({super.key});
+  void _toggleShopLock(String shopPhone, bool currentLockState) async {
+    await _dbRef.child('shops').child(shopPhone).update({'isLocked': !currentLockState});
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(!currentLockState ? 'दुकान लॉक कर दी गई है' : 'दुकान अनलॉक कर दी गई है')),
+      );
+    }
+  }
+
+  void _approveWorker(String workerPhone) async {
+    await _dbRef.child('workers').child(workerPhone).update({
+      'isVerified': true,
+      'status': 'APPROVED',
+    });
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('कारीगर की प्रोफाइल वेरिफाई हो गई है!')));
+    }
+  }
+
+  void _deleteWorker(String workerPhone, String workerName) async {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('$workerName को हटाएं?'),
+        content: const Text('क्या आप वाकई इस कारीगर/ठेकेदार को हटाना चाहते हैं?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('रद्द करें')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () async {
+              await _dbRef.child('workers').child(workerPhone).remove();
+              if (context.mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('कारीगर डिलीट कर दिया गया है')));
+              }
+            },
+            child: const Text('डिलीट करें', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    DatabaseReference inquiryRef = FirebaseDatabase.instance.ref().child('inquiries');
-
-    return StreamBuilder(
-      stream: inquiryRef.onValue,
-      builder: (context, AsyncSnapshot<DatabaseEvent> snapshot) {
-        if (!snapshot.hasData || snapshot.data!.snapshot.value == null) {
-          return const Center(child: Text('कोई इंक्वायरी नहीं आई है।'));
-        }
-
-        Map<dynamic, dynamic> map = snapshot.data!.snapshot.value as Map<dynamic, dynamic>;
-        List<Map<String, dynamic>> inquiryList = [];
-        map.forEach((key, value) {
-          inquiryList.add(Map<String, dynamic>.from(value));
-        });
-
-        return ListView.builder(
-          itemCount: inquiryList.length,
-          itemBuilder: (context, index) {
-            var inq = inquiryList[index];
-
-            return Card(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              elevation: 2,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              child: ListTile(
-                contentPadding: const EdgeInsets.all(16),
-                leading: const CircleAvatar(
-                  backgroundColor: Color(0xFF10B981),
-                  child: Icon(Icons.person, color: Colors.white),
-                ),
-                title: Text('${inq['name']} (${inq['phone']})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                subtitle: Padding(
-                  padding: const EdgeInsets.only(top: 6.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('प्रॉपर्टी: ${inq['property']}', style: const TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 2),
-                      Text('पता / लोकेशन: ${inq['address']}', style: const TextStyle(color: Colors.black87)),
-                    ],
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('एडमिन कंट्रोल (Admin Control)'),
+        backgroundColor: const Color(0xFF0F172A),
+        foregroundColor: Colors.white,
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 12.0),
+            child: DropdownButton<String>(
+              dropdownColor: const Color(0xFF1E293B),
+              value: _selectedCity,
+              underline: const SizedBox(),
+              icon: const Icon(Icons.location_on, color: Color(0xFF10B981)),
+              style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+              onChanged: (String? newCity) {
+                if (newCity != null) {
+                  setState(() {
+                    _selectedCity = newCity;
+                  });
+                }
+              },
+              items: _cities.map<DropdownMenuItem<String>>((String city) {
+                return DropdownMenuItem<String>(
+                  value: city,
+                  child: Text(city),
+                );
+              }).toList(),
+            ),
+          )
+        ],
+      ),
+      body: Column(
+        children: [
+          Container(
+            color: const Color(0xFF1E293B),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextButton.icon(
+                    onPressed: () => setState(() => _currentTabIndex = 0),
+                    icon: const Icon(Icons.storefront, color: Color(0xFF10B981)),
+                    label: Text('दुकानें (Shops)', style: TextStyle(color: _currentTabIndex == 0 ? const Color(0xFF10B981) : Colors.white60, fontWeight: FontWeight.bold)),
                   ),
                 ),
-              ),
-            );
-          },
+                Expanded(
+                  child: TextButton.icon(
+                    onPressed: () => setState(() => _currentTabIndex = 1),
+                    icon: const Icon(Icons.engineering, color: Color(0xFF10B981)),
+                    label: Text('कारीगर/ठेकेदार', style: TextStyle(color: _currentTabIndex == 1 ? const Color(0xFF10B981) : Colors.white60, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: _currentTabIndex == 0 ? _buildShopsManager() : _buildWorkersManager(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildShopsManager() {
+    Query query = _dbRef.child('shops');
+    if (_selectedCity != "All") {
+      query = query.orderByChild('city').equalTo(_selectedCity);
+    }
+
+    return FirebaseAnimatedList(
+      query: query,
+      itemBuilder: (context, snapshot, animation, index) {
+        if (snapshot.value == null) return const SizedBox.shrink();
+        Map shopData = snapshot.value as Map;
+        String shopPhone = snapshot.key ?? '';
+        String shopName = shopData['shop_name'] ?? 'अनाम दुकान';
+        String category = shopData['category'] ?? 'हार्डवेयर';
+        String city = shopData['city'] ?? 'Faridabad';
+        bool isApproved = shopData['isApproved'] ?? false;
+        bool isLocked = shopData['isLocked'] ?? false;
+        double pending = (shopData['pendingCommission'] ?? 0.0).toDouble();
+
+        return Card(
+          margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          elevation: 3,
+          child: Padding(
+            padding: const EdgeInsets.all(14.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        shopName,
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: isApproved ? Colors.green.shade100 : Colors.orange.shade100,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        isApproved ? 'APPROVED' : 'PENDING',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: isApproved ? Colors.green.shade900 : Colors.orange.shade900,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text('श्रेणी: $category • शहर: $city', style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                Text('फ़ोन नंबर: +91 $shopPhone', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                const SizedBox(height: 4),
+                Text('बकाया कमिशन: ₹${pending.toStringAsFixed(1)}', style: TextStyle(color: pending > 0 ? Colors.red : Colors.green, fontWeight: FontWeight.bold)),
+                const Divider(height: 20),
+                Row(
+                  children: [
+                    if (!isApproved) ...[
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () => _approveShop(shopPhone),
+                          icon: const Icon(Icons.check_circle, size: 16, color: Colors.white),
+                          label: const Text('अप्रूव करें', style: TextStyle(color: Colors.white, fontSize: 12)),
+                          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981)),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                    IconButton(
+                      icon: Icon(isLocked ? Icons.lock : Icons.lock_open, color: isLocked ? Colors.red : Colors.grey),
+                      tooltip: isLocked ? 'अनलॉक करें' : 'लॉक करें',
+                      onPressed: () => _toggleShopLock(shopPhone, isLocked),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete_forever, color: Colors.red),
+                      tooltip: 'दुकान डिलीट करें',
+                      onPressed: () => _deleteShop(shopPhone, shopName),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildWorkersManager() {
+    Query query = _dbRef.child('workers');
+    if (_selectedCity != "All") {
+      query = query.orderByChild('city').equalTo(_selectedCity);
+    }
+
+    return FirebaseAnimatedList(
+      query: query,
+      itemBuilder: (context, snapshot, animation, index) {
+        if (snapshot.value == null) return const SizedBox.shrink();
+        Map workerData = snapshot.value as Map;
+        String workerPhone = snapshot.key ?? '';
+        String name = workerData['name'] ?? 'अनाम कारीगर';
+        String workType = workerData['work_type'] ?? 'मिस्त्री';
+        String city = workerData['city'] ?? 'Faridabad';
+        bool isVerified = workerData['isVerified'] ?? false;
+
+        return Card(
+          margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: ListTile(
+            contentPadding: const EdgeInsets.all(12),
+            leading: CircleAvatar(
+              backgroundColor: isVerified ? Colors.blue : Colors.grey,
+              child: const Icon(Icons.person, color: Colors.white),
+            ),
+            title: Row(
+              children: [
+                Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                if (isVerified) const Icon(Icons.verified, color: Colors.blue, size: 18),
+              ],
+            ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('काम: $workType • शहर: $city'),
+                Text('फ़ोन: +91 $workerPhone', style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.w500)),
+              ],
+            ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (!isVerified)
+                  IconButton(
+                    icon: const Icon(Icons.check_circle_outline, color: Colors.green),
+                    tooltip: 'वेरिफाई करें',
+                    onPressed: () => _approveWorker(workerPhone),
+                  ),
+                IconButton(
+                  icon: const Icon(Icons.delete_forever, color: Colors.red),
+                  tooltip: 'हटाएं',
+                  onPressed: () => _deleteWorker(workerPhone, name),
+                ),
+              ],
+            ),
+          ),
         );
       },
     );
