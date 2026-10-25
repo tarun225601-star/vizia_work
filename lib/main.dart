@@ -9,12 +9,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-// 🚀 RAM में डेटा रखने के लिए ग्लोबल वेरिएबल (सुपर-फास्ट स्पीड के लिए)
-late SharedPreferences globalPrefs;
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
   await Firebase.initializeApp(
     options: const FirebaseOptions(
       apiKey: "AIzaSyDummyKeyForViziawork",
@@ -24,10 +20,6 @@ void main() async {
       databaseURL: "https://viziawork-default-rtdb.firebaseio.com/",
     ),
   );
-
-  // 🚀 ऐप स्टार्ट होते ही SharedPreferences को RAM में लोड कर लो (Instagram जैसी स्पीड)
-  globalPrefs = await SharedPreferences.getInstance();
-
   runApp(const ViziaworkApp());
 }
 
@@ -59,7 +51,7 @@ class ViziaworkApp extends StatelessWidget {
 }
 
 // ---------------------------------------------------------
-// 0. SPLASH SCREEN (INSTANT AUTO-LOGIN)
+// 0. SPLASH SCREEN (WITH AUTO-LOGIN & SHARED PREFERENCES)
 // ---------------------------------------------------------
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -75,29 +67,23 @@ class _SplashScreenState extends State<SplashScreen> {
     _checkSavedUser();
   }
 
-  void _checkSavedUser() {
-    String? phone = globalPrefs.getString('user_phone');
-    String? role = globalPrefs.getString('user_role');
+  void _checkSavedUser() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? phone = prefs.getString('user_phone');
+    String? role = prefs.getString('user_role');
+
+    await Future.delayed(const Duration(seconds: 1));
 
     if (!mounted) return;
 
     if (phone != null && phone.isNotEmpty) {
       if (role == 'SHOPKEEPER') {
-        Navigator.pushReplacement(
-          context, 
-          MaterialPageRoute(builder: (context) => ShopkeeperDashboardScreen(shopPhone: phone))
-        );
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => ShopkeeperDashboardScreen(shopPhone: phone)));
       } else {
-        Navigator.pushReplacement(
-          context, 
-          MaterialPageRoute(builder: (context) => HomeScreen(userPhone: phone, isContractor: role == 'CONTRACTOR'))
-        );
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => HomeScreen(userPhone: phone, isContractor: role == 'CONTRACTOR')));
       }
     } else {
-      Navigator.pushReplacement(
-        context, 
-        MaterialPageRoute(builder: (context) => const LoginScreen())
-      );
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const LoginScreen()));
     }
   }
 
@@ -133,7 +119,8 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    await globalPrefs.setString('user_phone', phone);
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString('user_phone', phone);
 
     if (mounted) {
       Navigator.push(
@@ -209,7 +196,7 @@ class _LoginScreenState extends State<LoginScreen> {
 }
 
 // ---------------------------------------------------------
-// 2. OTP VERIFICATION SCREEN
+// 2. OTP VERIFICATION SCREEN (WITH BACK BUTTON)
 // ---------------------------------------------------------
 class OtpVerificationScreen extends StatefulWidget {
   final String phone;
@@ -281,14 +268,15 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
 }
 
 // ---------------------------------------------------------
-// 3. ROLE SELECTION SCREEN
+// 3. ROLE SELECTION SCREEN (WITH BACK BUTTON)
 // ---------------------------------------------------------
 class RoleSelectionScreen extends StatelessWidget {
   final String phone;
   const RoleSelectionScreen({super.key, required this.phone});
 
   void _saveRole(String role) async {
-    await globalPrefs.setString('user_role', role);
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString('user_role', role);
   }
 
   @override
@@ -299,7 +287,8 @@ class RoleSelectionScreen extends StatelessWidget {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () async {
-            await globalPrefs.clear();
+            SharedPreferences prefs = await SharedPreferences.getInstance();
+            await prefs.clear();
             if (context.mounted) {
               Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const LoginScreen()));
             }
@@ -403,7 +392,7 @@ class RoleSelectionScreen extends StatelessWidget {
 }
 
 // ---------------------------------------------------------
-// 4. MAIN HOME SCREEN (WITH CITY FILTER & 5-SHOP PAGINATION)
+// 4. MAIN HOME SCREEN (SHOWS UNLOCKED SHOPS ONLY)
 // ---------------------------------------------------------
 class HomeScreen extends StatefulWidget {
   final String userPhone;
@@ -415,26 +404,120 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
   int _walletBalance = 0;
-  String _selectedCity = "Faridabad"; // 🎯 बाय डिफॉल्ट फरीदाबाद
-  final List<String> _cities = ["Faridabad", "Gurugram", "Delhi", "Noida", "Ghaziabad"];
   final DatabaseReference _userRef = FirebaseDatabase.instance.ref();
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     _loadWallet();
   }
 
   void _loadWallet() {
     _userRef.child('users').child(widget.userPhone).child('wallet_balance').onValue.listen((event) {
-      if (event.snapshot.value != null && mounted) {
+      if (event.snapshot.value != null) {
         setState(() {
           _walletBalance = (event.snapshot.value as num).toInt();
         });
       }
     });
+  }
+
+  void _showGenerateCodeDialog() {
+    final TextEditingController amountController = TextEditingController();
+    final TextEditingController mistryPhoneController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text('4-Digit Bill Code बनाएं', style: TextStyle(fontWeight: FontWeight.bold)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('दुकान पर बिल बनने पर कोड बनाएं और 1% कैशबैक पाएं!'),
+              const SizedBox(height: 16),
+              TextField(
+                controller: amountController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: 'अनुमानित बिल राशि (₹)',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+              const SizedBox(height: 12),
+              if (!widget.isContractor)
+                TextField(
+                  controller: mistryPhoneController,
+                  keyboardType: TextInputType.phone,
+                  decoration: InputDecoration(
+                    labelText: 'मिस्त्री/ठेकेदार का नंबर (वैकल्पिक)',
+                    hintText: '0.5% बोनस दिलाने के लिए भरें',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('रद्द करें')),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981)),
+              onPressed: () async {
+                if (amountController.text.isEmpty) return;
+                int amount = int.parse(amountController.text.trim());
+                String code = (1000 + Random().nextInt(9000)).toString();
+
+                await _userRef.child('pending_codes').child(code).set({
+                  'code': code,
+                  'userPhone': widget.userPhone,
+                  'mistryPhone': mistryPhoneController.text.trim(),
+                  'amount': amount,
+                  'status': 'PENDING',
+                  'createdAt': ServerValue.timestamp,
+                });
+
+                if (mounted) {
+                  Navigator.pop(context);
+                  _showCodeResultDialog(code, amount);
+                }
+              },
+              child: const Text('कोड जनरेट करें', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showCodeResultDialog(String code, int amount) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('आपका बिल कोड', textAlign: TextAlign.center),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(code, style: const TextStyle(fontSize: 42, fontWeight: FontWeight.w900, color: Color(0xFF10B981), letterSpacing: 6)),
+            const SizedBox(height: 10),
+            Text('बिल राशि: ₹$amount', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const SizedBox(height: 10),
+            const Text('यह 4-डिजिट कोड दुकानदार को बताएं। दुकानदार कोड एंटर करके बिल पक्का करेगा।', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: Colors.grey)),
+          ],
+        ),
+        actions: [
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981)),
+            onPressed: () => Navigator.pop(context),
+            child: const Text('ठीक है', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -451,113 +534,638 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         actions: [
-          // 🏙️ सिटी चुनने का फ़िल्टर
-          Padding(
-            padding: const EdgeInsets.only(right: 12.0),
-            child: DropdownButton<String>(
-              value: _selectedCity,
-              underline: const SizedBox(),
-              icon: const Icon(Icons.location_on, color: Color(0xFF10B981)),
-              style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
-              onChanged: (String? newCity) {
-                if (newCity != null) {
-                  setState(() {
-                    _selectedCity = newCity;
-                  });
-                }
-              },
-              items: _cities.map<DropdownMenuItem<String>>((String city) {
-                return DropdownMenuItem<String>(
-                  value: city,
-                  child: Text(city),
-                );
-              }).toList(),
+          Container(
+            margin: const EdgeInsets.only(right: 16),
+            child: Chip(
+              backgroundColor: const Color(0xFF10B981).withOpacity(0.15),
+              avatar: const Icon(Icons.account_balance_wallet, size: 18, color: Color(0xFF10B981)),
+              label: Text('कैशबैक: ₹$_walletBalance', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF10B981))),
             ),
-          )
+          ),
+        ],
+        bottom: TabBar(
+          controller: _tabController,
+          labelColor: const Color(0xFF10B981),
+          unselectedColor: Colors.grey,
+          indicatorColor: const Color(0xFF10B981),
+          tabs: const [
+            Tab(icon: Icon(Icons.engineering), text: 'कारीगर व ठेकेदार'),
+            Tab(icon: Icon(Icons.storefront), text: 'मटीरियल दुकानें'),
+          ],
+        ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          _buildWorkersList(),
+          _buildShopsList(),
         ],
       ),
-      body: Column(
-        children: [
-          // 💳 वॉलेट बैलेंस कार्ड
-          Container(
-            width: double.infinity,
-            margin: const EdgeInsets.all(16),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFF10B981),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('आपका कुल वॉलेट बैलेंस', style: TextStyle(color: Colors.white70, fontSize: 13)),
-                    const SizedBox(height: 4),
-                    Text('₹$_walletBalance', style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
-                  ],
-                ),
-                const Icon(Icons.account_balance_wallet, color: Colors.white, size: 36),
-              ],
-            ),
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.all(16),
+        color: Colors.white,
+        child: ElevatedButton.icon(
+          onPressed: _showGenerateCodeDialog,
+          icon: const Icon(Icons.qr_code_2, color: Colors.white),
+          label: const Text('दुकान बिल कोड (Dynamic 4-Digit Code) बनाएं', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF10B981),
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           ),
+        ),
+      ),
+    );
+  }
 
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                '$_selectedCity की मान्यता प्राप्त दुकानें:',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
+  Widget _buildWorkersList() {
+    DatabaseReference workersRef = FirebaseDatabase.instance.ref().child('public_workers');
+    return FirebaseAnimatedList(
+      query: workersRef,
+      itemBuilder: (context, snapshot, animation, index) {
+        if (snapshot.value == null) return Container();
+        Map worker = snapshot.value as Map;
+        String imgStr = worker['profileImage'] ?? '';
+
+        return Card(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: ListTile(
+            leading: CircleAvatar(
+              backgroundColor: const Color(0xFF10B981).withOpacity(0.2),
+              backgroundImage: imgStr.isNotEmpty ? MemoryImage(base64Decode(imgStr)) : null,
+              child: imgStr.isEmpty ? const Icon(Icons.person, color: Color(0xFF10B981)) : null,
             ),
-          ),
-
-          // 🚀 5-दुकानों की PAGINATED LIST (CITY-BY-CITY)
-          Expanded(
-            child: FirebaseAnimatedList(
-              // 🎯 सिर्फ चुनी हुई सिटी की दुकानें आएंगी और एक बार में सिर्फ 5 लोड होंगी!
-              query: FirebaseDatabase.instance
-                  .ref()
-                  .child('shops')
-                  .orderByChild('city')
-                  .equalTo(_selectedCity)
-                  .limitToFirst(5), 
-              itemBuilder: (context, snapshot, animation, index) {
-                Map? shopData = snapshot.value as Map?;
-                if (shopData == null) return const SizedBox.shrink();
-
-                String shopName = shopData['shop_name'] ?? 'दुकान का नाम';
-                String category = shopData['category'] ?? 'हार्डवेयर';
-                String address = shopData['address'] ?? 'पता उपलब्ध नहीं है';
-
-                return Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  elevation: 2,
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.all(16),
-                    leading: const CircleAvatar(
-                      backgroundColor: Color(0xFF10B981),
-                      child: Icon(Icons.storefront, color: Colors.white),
-                    ),
-                    title: Text(shopName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                    subtitle: Text('$category • $address', style: const TextStyle(color: Colors.grey, fontSize: 13)),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
-                  ),
-                );
+            title: Text(worker['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
+            subtitle: Text('${worker['skill']} • ${worker['address']}'),
+            trailing: IconButton(
+              icon: const Icon(Icons.call, color: Colors.green),
+              onPressed: () async {
+                String phone = worker['phone'] ?? '';
+                if (phone.isNotEmpty) {
+                  final Uri launchUri = Uri(scheme: 'tel', path: phone);
+                  await launchUrl(launchUri);
+                }
               },
             ),
           ),
-        ],
+        );
+      },
+    );
+  }
+
+  Widget _buildShopsList() {
+    DatabaseReference shopsRef = FirebaseDatabase.instance.ref().child('shops');
+    return FirebaseAnimatedList(
+      query: shopsRef,
+      itemBuilder: (context, snapshot, animation, index) {
+        if (snapshot.value == null) return Container();
+        Map shopData = snapshot.value as Map;
+
+        bool isLocked = shopData['isLocked'] ?? false;
+        if (isLocked) return Container(); // 🔒 locked दुकान ग्राहकों को नहीं दिखेगी
+
+        String mainImage = shopData['shopImage'] ?? '';
+        List galleryImages = shopData['galleryImages'] ?? [];
+        String customOffer = shopData['custom_offer'] ?? '';
+        int totalBills = shopData['totalPassedBills'] ?? 0;
+        int totalSales = shopData['totalSalesAmount'] ?? 0;
+
+        return Card(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          elevation: 4,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Stack(
+                children: [
+                  Container(
+                    height: 160,
+                    width: double.infinity,
+                    color: Colors.grey.shade300,
+                    child: mainImage.isNotEmpty
+                        ? Image.memory(base64Decode(mainImage), fit: BoxFit.cover)
+                        : const Icon(Icons.store, size: 60, color: Colors.grey),
+                  ),
+                  Positioned(
+                    top: 12,
+                    right: 12,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: totalBills > 0 ? const Color(0xFF10B981) : Colors.orange.shade800,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4)],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            totalBills > 0 ? Icons.verified : Icons.stars,
+                            color: Colors.white,
+                            size: 14,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '$totalBills बिल पास',
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 12,
+                    left: 12,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0F172A),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4)],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.payments_rounded, color: Colors.greenAccent, size: 14),
+                          const SizedBox(width: 4),
+                          Text(
+                            'कुल बिजनेस: ₹$totalSales',
+                            style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold, fontSize: 11),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            shopData['shop_name'] ?? 'दुकान का नाम',
+                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        Text(
+                          '₹$totalSales बिक्री',
+                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF10B981)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${shopData['category']} • ${shopData['address']}',
+                      style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
+                    ),
+                    if (customOffer.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.shade100,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.amber.shade700),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.local_offer, color: Colors.amber, size: 18),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                customOffer,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    if (galleryImages.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      const Text('दुकान/स्टॉक की गैलरी फोटो:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54)),
+                      const SizedBox(height: 6),
+                      SizedBox(
+                        height: 70,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: galleryImages.length,
+                          itemBuilder: (context, index) {
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 8.0),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.memory(
+                                  base64Decode(galleryImages[index]),
+                                  width: 70,
+                                  height: 70,
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ---------------------------------------------------------
+// 5. REGISTER WORKER SCREEN (WITH BACK BUTTON)
+// ---------------------------------------------------------
+class RegisterWorkerScreen extends StatefulWidget {
+  final String workerPhone;
+  const RegisterWorkerScreen({super.key, required this.workerPhone});
+
+  @override
+  State<RegisterWorkerScreen> createState() => _RegisterWorkerScreenState();
+}
+
+class _RegisterWorkerScreenState extends State<RegisterWorkerScreen> {
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _skillController = TextEditingController();
+  final TextEditingController _addressController = TextEditingController();
+  String? _base64Image;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLocalWorker();
+  }
+
+  void _loadLocalWorker() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _nameController.text = prefs.getString('worker_name') ?? '';
+      _skillController.text = prefs.getString('worker_skill') ?? '';
+      _addressController.text = prefs.getString('worker_address') ?? '';
+      _base64Image = prefs.getString('worker_image') ?? '';
+    });
+  }
+
+  Future<void> _pickImage() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery, imageQuality: 40);
+    if (image != null) {
+      Uint8List bytes = await image.readAsBytes();
+      setState(() {
+        _base64Image = base64Encode(bytes);
+      });
+    }
+  }
+
+  void _saveWorker() async {
+    if (_nameController.text.isEmpty || _skillController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('कृपया नाम और काम की कैटेगरी भरें')));
+      return;
+    }
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString('worker_name', _nameController.text.trim());
+    await prefs.setString('worker_skill', _skillController.text.trim());
+    await prefs.setString('worker_address', _addressController.text.trim());
+    await prefs.setString('worker_image', _base64Image ?? '');
+
+    DatabaseReference ref = FirebaseDatabase.instance.ref().child('public_workers').child(widget.workerPhone);
+    await ref.set({
+      'name': _nameController.text.trim(),
+      'phone': widget.workerPhone,
+      'skill': _skillController.text.trim(),
+      'address': _addressController.text.trim(),
+      'profileImage': _base64Image ?? '',
+      'createdAt': ServerValue.timestamp,
+    });
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('कारीगर प्रोफाइल सफलता से सेव हो गई!')));
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => HomeScreen(userPhone: widget.workerPhone, isContractor: true)),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('कारीगर / ठेकेदार रजिस्ट्रेशन'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          onPressed: () => Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => RoleSelectionScreen(phone: widget.workerPhone)),
+          ),
+        ),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Stack(
+                children: [
+                  CircleAvatar(
+                    radius: 50,
+                    backgroundColor: Colors.grey.shade200,
+                    backgroundImage: _base64Image != null && _base64Image!.isNotEmpty ? MemoryImage(base64Decode(_base64Image!)) : null,
+                    child: _base64Image == null || _base64Image!.isEmpty ? const Icon(Icons.person, size: 50, color: Colors.grey) : null,
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: InkWell(
+                      onTap: _pickImage,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: const BoxDecoration(color: Color(0xFF10B981), shape: BoxShape.circle),
+                        child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
+                      ),
+                    ),
+                  )
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            TextField(controller: _nameController, decoration: InputDecoration(labelText: 'आपका पूरा नाम', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)))),
+            const SizedBox(height: 16),
+            TextField(controller: _skillController, decoration: InputDecoration(labelText: 'कारीगरी / काम (जैसे: मिस्त्री, पेंटर, इलेक्ट्रीशियन)', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)))),
+            const SizedBox(height: 16),
+            TextField(controller: _addressController, decoration: InputDecoration(labelText: 'पता / क्षेत्र (जैसे: अनंगपुर, फरीदाबाद)', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)))),
+            const SizedBox(height: 30),
+            ElevatedButton(
+              onPressed: _saveWorker,
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981), padding: const EdgeInsets.symmetric(vertical: 18), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+              child: const Text('रजिस्टर करें', style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
 // ---------------------------------------------------------
-// 5. SHOPKEEPER DASHBOARD (WITH 10 PM AUTO-LOCK SYSTEM)
+// 6. SHOPKEEPER REGISTER / EDIT FORM (WITH BACK BUTTON)
+// ---------------------------------------------------------
+class RegisterShopScreen extends StatefulWidget {
+  final String shopPhone;
+  final Map? existingData;
+
+  const RegisterShopScreen({super.key, required this.shopPhone, this.existingData});
+
+  @override
+  State<RegisterShopScreen> createState() => _RegisterShopScreenState();
+}
+
+class _RegisterShopScreenState extends State<RegisterShopScreen> {
+  final TextEditingController _shopNameController = TextEditingController();
+  final TextEditingController _categoryController = TextEditingController();
+  final TextEditingController _addressController = TextEditingController();
+  final TextEditingController _offerController = TextEditingController();
+
+  String? _mainBase64Image;
+  List<String> _galleryBase64Images = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadShopData();
+  }
+
+  void _loadShopData() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    if (widget.existingData != null) {
+      _shopNameController.text = widget.existingData!['shop_name'] ?? '';
+      _categoryController.text = widget.existingData!['category'] ?? '';
+      _addressController.text = widget.existingData!['address'] ?? '';
+      _offerController.text = widget.existingData!['custom_offer'] ?? '';
+      _mainBase64Image = widget.existingData!['shopImage'] ?? '';
+      
+      if (widget.existingData!['galleryImages'] != null) {
+        _galleryBase64Images = List<String>.from(widget.existingData!['galleryImages']);
+      }
+    } else {
+      _shopNameController.text = prefs.getString('shop_name') ?? '';
+      _categoryController.text = prefs.getString('shop_category') ?? '';
+      _addressController.text = prefs.getString('shop_address') ?? '';
+      _offerController.text = prefs.getString('shop_offer') ?? '';
+      _mainBase64Image = prefs.getString('shop_main_image') ?? '';
+    }
+    setState(() {});
+  }
+
+  Future<void> _pickMainImage() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery, imageQuality: 40);
+    if (image != null) {
+      Uint8List bytes = await image.readAsBytes();
+      setState(() {
+        _mainBase64Image = base64Encode(bytes);
+      });
+    }
+  }
+
+  Future<void> _pickGalleryImages() async {
+    final ImagePicker picker = ImagePicker();
+    final List<XFile> images = await picker.pickMultiImage(imageQuality: 35);
+    if (images.isNotEmpty) {
+      List<String> tempImages = [];
+      for (var img in images) {
+        Uint8List bytes = await img.readAsBytes();
+        tempImages.add(base64Encode(bytes));
+        if (tempImages.length == 5) break;
+      }
+      setState(() {
+        _galleryBase64Images = tempImages;
+      });
+    }
+  }
+
+  void _saveShop() async {
+    if (_shopNameController.text.isEmpty || _categoryController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('कृपया दुकान का नाम और कैटेगरी भरें')));
+      return;
+    }
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString('shop_name', _shopNameController.text.trim());
+    await prefs.setString('shop_category', _categoryController.text.trim());
+    await prefs.setString('shop_address', _addressController.text.trim());
+    await prefs.setString('shop_offer', _offerController.text.trim());
+    await prefs.setString('shop_main_image', _mainBase64Image ?? '');
+
+    DatabaseReference ref = FirebaseDatabase.instance.ref().child('shops').child(widget.shopPhone);
+    
+    int totalPassedBills = widget.existingData?['totalPassedBills'] ?? 0;
+    int totalSalesAmount = widget.existingData?['totalSalesAmount'] ?? 0;
+
+    await ref.update({
+      'shop_name': _shopNameController.text.trim(),
+      'phone': widget.shopPhone,
+      'category': _categoryController.text.trim(),
+      'address': _addressController.text.trim(),
+      'custom_offer': _offerController.text.trim(),
+      'shopImage': _mainBase64Image ?? '',
+      'galleryImages': _galleryBase64Images,
+      'totalPassedBills': totalPassedBills,
+      'totalSalesAmount': totalSalesAmount,
+      'isLocked': widget.existingData?['isLocked'] ?? false,
+      'pendingCommission': widget.existingData?['pendingCommission'] ?? 0.0,
+      'subscription_tier': widget.existingData?['subscription_tier'] ?? 'FREE',
+      'updatedAt': ServerValue.timestamp,
+    });
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('दुकान की जानकारी सेव हो गई!')));
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => ShopkeeperDashboardScreen(shopPhone: widget.shopPhone)),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.existingData != null ? 'दुकान की जानकारी बदलें' : 'अपनी दुकान लिस्ट करें'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text('दुकान का मुख्य बड़ा बैनर फोटो लगाएँ:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+            const SizedBox(height: 8),
+            GestureDetector(
+              onTap: _pickMainImage,
+              child: Container(
+                height: 150,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade200,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFF10B981), width: 1.5),
+                  image: _mainBase64Image != null && _mainBase64Image!.isNotEmpty
+                      ? DecorationImage(image: MemoryImage(base64Decode(_mainBase64Image!)), fit: BoxFit.cover)
+                      : null,
+                ),
+                child: _mainBase64Image == null || _mainBase64Image!.isEmpty
+                    ? const Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.add_photo_alternate_rounded, size: 40, color: Color(0xFF10B981)),
+                          SizedBox(height: 6),
+                          Text('यहाँ टैप करके मुख्य शॉप बैनर फोटो चुनें', style: TextStyle(color: Colors.black54, fontSize: 13)),
+                        ],
+                      )
+                    : Align(
+                        alignment: Alignment.bottomRight,
+                        child: Container(
+                          margin: const EdgeInsets.all(8),
+                          padding: const EdgeInsets.all(6),
+                          decoration: const BoxDecoration(color: Color(0xFF10B981), shape: BoxShape.circle),
+                          child: const Icon(Icons.edit, color: Colors.white, size: 18),
+                        ),
+                      ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text('दुकान/स्टॉक की 5 फ़ोटो अपलोड करें:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+            const SizedBox(height: 8),
+            GestureDetector(
+              onTap: _pickGalleryImages,
+              child: Container(
+                height: 90,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.shade400, width: 1),
+                ),
+                child: _galleryBase64Images.isEmpty
+                    ? const Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.collections, size: 28, color: Colors.grey),
+                          SizedBox(height: 4),
+                          Text('यहाँ टैप करके 5 स्टॉक फोटो तक चुनें', style: TextStyle(fontSize: 12, color: Colors.black54)),
+                        ],
+                      )
+                    : ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: _galleryBase64Images.length,
+                        itemBuilder: (context, index) {
+                          return Padding(
+                            padding: const EdgeInsets.all(6.0),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.memory(base64Decode(_galleryBase64Images[index]), width: 75, height: 75, fit: BoxFit.cover),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            TextField(controller: _shopNameController, decoration: InputDecoration(labelText: 'दुकान का नाम', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)))),
+            const SizedBox(height: 16),
+            TextField(controller: _categoryController, decoration: InputDecoration(labelText: 'कैटेगरी (जैसे: सैनिटरी, टाइल्स, पेंट, हार्डवेयर)', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)))),
+            const SizedBox(height: 16),
+            TextField(controller: _addressController, decoration: InputDecoration(labelText: 'दुकान का पता (जैसे: अनंगपुर रोड, फरीदाबाद)', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)))),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _offerController,
+              maxLines: 2,
+              decoration: InputDecoration(
+                labelText: 'दुकान का स्पेशल ऑफर / डिस्काउंट संदेश (ऑप्शनल)',
+                hintText: 'उदा: इस हफ्ते सैनिटरी फिटिंग पर स्पेशल 5% अतिरिक्त छूट!',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                filled: true,
+                fillColor: Colors.amber.shade50,
+              ),
+            ),
+            const SizedBox(height: 30),
+            ElevatedButton(
+              onPressed: _saveShop,
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981), padding: const EdgeInsets.symmetric(vertical: 18), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+              child: const Text('दुकान की जानकारी सेव करें', style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------
+// 7. SHOPKEEPER DASHBOARD (WITH 10 PM AUTO-LOCK SYSTEM)
 // ---------------------------------------------------------
 class ShopkeeperDashboardScreen extends StatefulWidget {
   final String shopPhone;
@@ -753,6 +1361,7 @@ class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen> {
     }
 
     int totalBills = _shopData?['totalPassedBills'] ?? 0;
+    int totalSales = _shopData?['totalSalesAmount'] ?? 0;
     String mainImage = _shopData?['shopImage'] ?? '';
     List galleryImages = _shopData?['galleryImages'] ?? [];
     String customOffer = _shopData?['custom_offer'] ?? '';
@@ -768,11 +1377,23 @@ class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen> {
             MaterialPageRoute(builder: (context) => RoleSelectionScreen(phone: widget.shopPhone)),
           ),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit, color: Color(0xFF10B981)),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => RegisterShopScreen(shopPhone: widget.shopPhone, existingData: _shopData)),
+              );
+            },
+          )
+        ],
       ),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // 🔒 LOCK WARNING BANNER
             if (_isLocked)
               Container(
                 color: Colors.red.shade800,
@@ -873,7 +1494,7 @@ class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen> {
 
                   const SizedBox(height: 24),
 
-                  // 📊 लेजर बोर्ड
+                  // 📊 बिजनेस लेजर बोर्ड (Dual Settlement & 10 PM Cutoff)
                   Container(
                     padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(color: const Color(0xFF0F172A), borderRadius: BorderRadius.circular(16)),
@@ -882,7 +1503,7 @@ class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text('🏆 पास हुए कुल बिल', style: TextStyle(color: Colors.amber, fontSize: 13, fontWeight: FontWeight.bold)),
+                            const Text('🏆 पास हुए कुल बिल (रैंकिंग काउंट)', style: TextStyle(color: Colors.amber, fontSize: 13, fontWeight: FontWeight.bold)),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                               decoration: BoxDecoration(color: Colors.amber, borderRadius: BorderRadius.circular(12)),
@@ -917,6 +1538,7 @@ class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen> {
                         const Divider(color: Colors.white24, height: 1),
                         const SizedBox(height: 10),
                         
+                        // 💳 UPI Option
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -926,6 +1548,8 @@ class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen> {
                           ],
                         ),
                         const SizedBox(height: 6),
+                        
+                        // 🏛️ Direct Bank Option
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -934,12 +1558,15 @@ class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen> {
                             Text('A/C: $_viziaAccountNumber • IFSC: $_viziaIfscCode', style: const TextStyle(color: Colors.amberAccent, fontSize: 11, fontWeight: FontWeight.bold)),
                           ],
                         ),
+                        const SizedBox(height: 2),
+                        Text('($_viziaBankName, $_viziaBranch)', style: const TextStyle(color: Colors.white54, fontSize: 10)),
                       ],
                     ),
                   ),
 
                   const SizedBox(height: 24),
 
+                  // 🔑 4-Digit Bill Code दर्ज करने का बॉक्स
                   const Text('ग्राहक/मिस्त्री का 4-Digit Code दर्ज करें:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 12),
                   TextField(
@@ -971,20 +1598,4 @@ class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen> {
       ),
     );
   }
-}
-
-// Placeholder Screens
-class RegisterWorkerScreen extends StatelessWidget {
-  final String workerPhone;
-  const RegisterWorkerScreen({super.key, required this.workerPhone});
-  @override
-  Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text('Worker Registration')));
-}
-
-class RegisterShopScreen extends StatelessWidget {
-  final String shopPhone;
-  final Map? existingData;
-  const RegisterShopScreen({super.key, required this.shopPhone, this.existingData});
-  @override
-  Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text('Shop Registration')));
 }
