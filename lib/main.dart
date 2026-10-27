@@ -1189,7 +1189,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
         bottom: TabBar(
           controller: _tabController,
           labelColor: const Color(0xFF4F46E5),
-          unselectedColor: Colors.grey,
+          unselectedLabelColor: Colors.grey,
           indicatorColor: const Color(0xFF4F46E5),
           tabs: const [
             Tab(icon: Icon(Icons.receipt_long_rounded), text: 'सभी गिग्स'),
