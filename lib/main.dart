@@ -113,7 +113,7 @@ class GigBooking {
   final String customerName;
   final String addressSector;
   final String fullAddress;
-  final String workRequirement; // काम की मात्रा/घंटे और कस्टम विवरण
+  final String workRequirement;
   final String status;
   final String partnerPhone;
   final String partnerName;
@@ -636,7 +636,7 @@ class RoleSelectionScreen extends StatelessWidget {
 }
 
 // ============================================================================
-// 6. CUSTOMER DASHBOARD (WITH WORK REQUIREMENT & DURATION/COUNT SELECTION)
+// 6. CUSTOMER DASHBOARD
 // ============================================================================
 class CustomerHomeScreen extends StatefulWidget {
   final String userPhone;
@@ -699,7 +699,6 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                   decoration: InputDecoration(labelText: 'कोठी / मकान नंबर और गली एड्रेस', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
                 ),
                 const SizedBox(height: 12),
-                // घंटे / कपड़ों की संख्या चुनने का ड्रॉपडाउन
                 DropdownButtonFormField<String>(
                   value: selectedQuantity,
                   decoration: InputDecoration(labelText: 'मात्रा / समय चुनें', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
@@ -716,7 +715,6 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                   onChanged: (val) { if (val != null) selectedQuantity = val; },
                 ),
                 const SizedBox(height: 12),
-                // कस्टमर की लिखने की सुविधा
                 TextField(
                   controller: noteController,
                   maxLines: 2,
@@ -923,7 +921,7 @@ class CustomerOrdersListScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.between,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(order.serviceName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                           Chip(
@@ -1087,7 +1085,7 @@ class _PartnerDashboardScreenState extends State<PartnerDashboardScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.between,
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(gig.serviceName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF4F46E5))),
                                 Text(gig.rate, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.green)),
@@ -1252,7 +1250,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.between,
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(gig.serviceName, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                               Chip(
@@ -1267,7 +1265,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                           Text('विवरण: ${gig.workRequirement}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF4F46E5))),
                           const Divider(height: 20),
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.between,
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
                                 isAccepted ? 'बुक किया: ${gig.partnerName} (+91 ${gig.partnerPhone})' : 'पार्टनर: अभी एक्सेप्ट नहीं हुआ',
