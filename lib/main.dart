@@ -24,7 +24,7 @@ void main() async {
       appId: "1:999888777666:android:endoworkapp",
       messagingSenderId: "999888777666",
       projectId: "endowork-official",
-      databaseURL: "https://endowork-official-default-rtdb.firebaseio.com/",
+      databaseURL: "https://viziawork-default-rtdb.firebaseio.com/",
     ),
   );
   runApp(const EndoworkMasterApp());
