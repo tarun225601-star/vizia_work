@@ -8,7 +8,7 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // ============================================================================
-// 1. APP ENTRY POINT & FIREBASE INITIALIZATION (EXACT VIZIAWORK URL)
+// 1. APP ENTRY POINT & FIREBASE INITIALIZATION
 // ============================================================================
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -114,12 +114,15 @@ class GigBooking {
   final String addressSector;
   final String fullAddress;
   final String workRequirement;
+  final double calculatedTotal;
+  final double adminCommission;
   final String status;
   final String partnerPhone;
   final String partnerName;
   final String paymentOtp;
   final bool isPaidToCompany;
   final int timestamp;
+  final String formattedDate;
 
   GigBooking({
     required this.orderId,
@@ -130,12 +133,15 @@ class GigBooking {
     required this.addressSector,
     required this.fullAddress,
     required this.workRequirement,
+    required this.calculatedTotal,
+    required this.adminCommission,
     required this.status,
     required this.partnerPhone,
     required this.partnerName,
     required this.paymentOtp,
     required this.isPaidToCompany,
     required this.timestamp,
+    required this.formattedDate,
   });
 
   Map<String, dynamic> toMap() {
@@ -148,12 +154,15 @@ class GigBooking {
       'addressSector': addressSector,
       'fullAddress': fullAddress,
       'workRequirement': workRequirement,
+      'calculatedTotal': calculatedTotal,
+      'adminCommission': adminCommission,
       'status': status,
       'partnerPhone': partnerPhone,
       'partnerName': partnerName,
       'paymentOtp': paymentOtp,
       'isPaidToCompany': isPaidToCompany,
       'timestamp': timestamp,
+      'formattedDate': formattedDate,
     };
   }
 
@@ -167,12 +176,15 @@ class GigBooking {
       addressSector: map['addressSector'] ?? 'Sector 15',
       fullAddress: map['fullAddress'] ?? '',
       workRequirement: map['workRequirement'] ?? 'सामान्य काम',
+      calculatedTotal: (map['calculatedTotal'] ?? 200.0).toDouble(),
+      adminCommission: (map['adminCommission'] ?? 30.0).toDouble(),
       status: map['status'] ?? 'PENDING',
       partnerPhone: map['partnerPhone'] ?? 'None',
       partnerName: map['partnerName'] ?? 'Unassigned',
       paymentOtp: map['paymentOtp'] ?? '0000',
       isPaidToCompany: map['isPaidToCompany'] ?? false,
       timestamp: map['timestamp'] ?? 0,
+      formattedDate: map['formattedDate'] ?? 'हाल ही में',
     );
   }
 }
@@ -256,26 +268,28 @@ class _SplashScreenState extends State<SplashScreen> {
       if (phone == '9999999999' || role == 'ADMIN') {
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const AdminDashboardScreen()));
       } else if (role == 'PARTNER') {
-        _checkPartnerBlockStatusAndNavigate(phone);
-      } else {
+        var snap = await FirebaseDatabase.instance.ref().child('partners').child(phone).get();
+        if (!mounted) return;
+        if (snap.exists && snap.value != null) {
+          Map data = snap.value as Map;
+          if (data['status'] == 'BLOCKED') {
+            Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => BlockedAccountScreen(phone: phone)));
+            return;
+          }
+          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => PartnerDashboardScreen(partnerPhone: phone)));
+          return;
+        } else {
+          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => RoleSelectionScreen(phone: phone)));
+          return;
+        }
+      } else if (role == 'CUSTOMER') {
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => CustomerHomeScreen(userPhone: phone)));
+      } else {
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => RoleSelectionScreen(phone: phone)));
       }
     } else {
       Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const LoginScreen()));
     }
-  }
-
-  void _checkPartnerBlockStatusAndNavigate(String phone) async {
-    var snap = await FirebaseDatabase.instance.ref().child('partners').child(phone).get();
-    if (!mounted) return;
-    if (snap.exists && snap.value != null) {
-      Map data = snap.value as Map;
-      if (data['status'] == 'BLOCKED') {
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => BlockedAccountScreen(phone: phone)));
-        return;
-      }
-    }
-    Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => PartnerDashboardScreen(partnerPhone: phone)));
   }
 
   void _seedDefaultServicesIfNecessary() async {
@@ -433,7 +447,14 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
       await prefs.setString('user_role', 'ADMIN');
       Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const AdminDashboardScreen()));
     } else {
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => RoleSelectionScreen(phone: widget.phone)));
+      var snap = await FirebaseDatabase.instance.ref().child('partners').child(widget.phone).get();
+      if (!mounted) return;
+      if (snap.exists && snap.value != null) {
+        await prefs.setString('user_role', 'PARTNER');
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => PartnerDashboardScreen(partnerPhone: widget.phone)));
+      } else {
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => RoleSelectionScreen(phone: widget.phone)));
+      }
     }
   }
 
@@ -735,8 +756,27 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                       return;
                     }
 
+                    double baseRate = 200.0;
+                    if (service.rate.contains('150')) baseRate = 150.0;
+                    else if (service.rate.contains('350')) baseRate = 350.0;
+                    else if (service.rate.contains('2500')) baseRate = 2500.0;
+                    else if (service.rate.contains('पैकेज')) baseRate = 500.0;
+
+                    int multiplier = 1;
+                    if (selectedQuantity.startsWith('2')) multiplier = 2;
+                    else if (selectedQuantity.startsWith('3')) multiplier = 3;
+                    else if (selectedQuantity.startsWith('4')) multiplier = 4;
+                    else if (selectedQuantity.contains('पूरा दिन')) multiplier = 6;
+                    else if (selectedQuantity.contains('महीने')) multiplier = 1;
+
+                    double calculatedTotal = baseRate * multiplier;
+                    double adminCommission = calculatedTotal * 0.15;
+
                     String orderId = _ordersRef.push().key!;
                     String generatedOtp = (1000 + Random().nextInt(9000)).toString();
+
+                    DateTime now = DateTime.now();
+                    String formattedDate = "${now.day}/${now.month}/${now.year} - ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
 
                     String finalRequirement = 'मात्रा/समय: $selectedQuantity | विवरण: ${customNote.isEmpty ? "सामान्य" : customNote}';
 
@@ -749,12 +789,15 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                       addressSector: selectedSector,
                       fullAddress: address,
                       workRequirement: finalRequirement,
+                      calculatedTotal: calculatedTotal,
+                      adminCommission: adminCommission,
                       status: 'PENDING',
                       partnerPhone: 'None',
                       partnerName: 'Pending Acceptance',
                       paymentOtp: generatedOtp,
                       isPaidToCompany: false,
-                      timestamp: DateTime.now().millisecondsSinceEpoch,
+                      timestamp: now.millisecondsSinceEpoch,
+                      formattedDate: formattedDate,
                     );
 
                     await _ordersRef.child(orderId).set(booking.toMap());
@@ -762,7 +805,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                     if (context.mounted) {
                       Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('ऑर्डर सफलता से बुक हो गया! पार्टनर का इंतज़ार है।'), backgroundColor: Colors.green),
+                        SnackBar(content: Text('ऑर्डर बुक हुआ! कुल: ₹$calculatedTotal'), backgroundColor: Colors.green),
                       );
                     }
                   },
@@ -931,9 +974,12 @@ class CustomerOrdersListScreen extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 4),
+                      Text('तारीख/समय: ${order.formattedDate}', style: const TextStyle(fontSize: 12, color: Colors.indigo, fontWeight: FontWeight.bold)),
                       Text('पता: ${order.addressSector}, ${order.fullAddress}', style: const TextStyle(fontSize: 13, color: Colors.grey)),
                       const SizedBox(height: 4),
                       Text('विवरण: ${order.workRequirement}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF4F46E5))),
+                      const SizedBox(height: 4),
+                      Text('कुल राशि: ₹${order.calculatedTotal}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.green)),
                       const Divider(height: 16),
                       Text('पार्टनर: ${order.partnerName} (${order.partnerPhone})\nOTP: ${order.paymentOtp}', style: const TextStyle(fontSize: 12)),
                     ],
@@ -962,6 +1008,8 @@ class PartnerDashboardScreen extends StatefulWidget {
 class _PartnerDashboardScreenState extends State<PartnerDashboardScreen> {
   bool isOnline = true;
   String partnerName = 'Partner';
+  String skillCategory = 'Service';
+  String address = 'Faridabad';
   final DatabaseReference _ordersRef = FirebaseDatabase.instance.ref().child('orders');
 
   @override
@@ -977,6 +1025,8 @@ class _PartnerDashboardScreenState extends State<PartnerDashboardScreen> {
       Map data = snap.value as Map;
       setState(() {
         partnerName = data['name'] ?? 'Partner';
+        skillCategory = data['skillCategory'] ?? 'Service';
+        address = data['address'] ?? 'Faridabad';
         isOnline = data['isOnline'] ?? true;
       });
     }
@@ -1006,9 +1056,113 @@ class _PartnerDashboardScreenState extends State<PartnerDashboardScreen> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${gig.serviceName} बुकिंग स्वीकार कर ली गई! ग्राहक का एड्रेस देखें।'), backgroundColor: Colors.green),
+        SnackBar(content: Text('${gig.serviceName} बुकिंग स्वीकार कर ली गई!'), backgroundColor: Colors.green),
       );
     }
+  }
+
+  void _showPartnerProfileModal(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(24),
+          child: StreamBuilder(
+            stream: _ordersRef.onValue,
+            builder: (context, snapshot) {
+              double myTotalEarnings = 0;
+              int myTotalJobs = 0;
+              List<GigBooking> myAcceptedGigs = [];
+
+              if (snapshot.hasData && snapshot.data?.snapshot.value != null) {
+                Map map = (snapshot.data!.snapshot.value as Map);
+                map.forEach((k, v) {
+                  var g = GigBooking.fromMap(k, v);
+                  if (g.partnerPhone == widget.partnerPhone && g.status == 'ACCEPTED') {
+                    myTotalEarnings += g.calculatedTotal;
+                    myTotalJobs++;
+                    myAcceptedGigs.add(g);
+                  }
+                });
+              }
+
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(partnerName, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF4F46E5))),
+                      IconButton(
+                        icon: const Icon(Icons.logout, color: Colors.red),
+                        tooltip: 'लॉगआउट',
+                        onPressed: () async {
+                          SharedPreferences prefs = await SharedPreferences.getInstance();
+                          await prefs.clear();
+                          if (context.mounted) {
+                            Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const LoginScreen()));
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                  Text('मोबाइल: +91 ${widget.partnerPhone}', style: const TextStyle(color: Colors.grey)),
+                  Text('हुनर: $skillCategory | पता: $address', style: const TextStyle(color: Colors.grey)),
+                  const Divider(height: 24),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(color: Colors.indigo.shade50, borderRadius: BorderRadius.circular(16)),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        Column(
+                          children: [
+                            const Text('कुल काम (Jobs)', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                            Text('$myTotalJobs', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF4F46E5))),
+                          ],
+                        ),
+                        Container(height: 30, width: 1, color: Colors.indigo.shade200),
+                        Column(
+                          children: [
+                            const Text('कुल बिजनेस (Total)', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                            Text('₹$myTotalEarnings', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.green)),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('मेरे पूरे किए गए काम (तारीख के अनुसार):', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    height: 200,
+                    child: myAcceptedGigs.isEmpty
+                        ? const Center(child: Text('अभी तक कोई काम पूरा नहीं किया।', style: TextStyle(color: Colors.grey)))
+                        : ListView.builder(
+                            itemCount: myAcceptedGigs.length,
+                            itemBuilder: (context, index) {
+                              var g = myAcceptedGigs[index];
+                              return Card(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                child: ListTile(
+                                  title: Text(g.serviceName, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                                  subtitle: Text('तारीख: ${g.formattedDate}\nविवरण: ${g.workRequirement}', style: const TextStyle(fontSize: 11)),
+                                  trailing: Text('₹${g.calculatedTotal}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              );
+            },
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -1018,13 +1172,18 @@ class _PartnerDashboardScreenState extends State<PartnerDashboardScreen> {
         title: Text('ENDOWORK Partner ($partnerName)'),
         actions: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Row(
               children: [
-                Text(isOnline ? 'Online 🟢' : 'Offline 🔴', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: isOnline ? Colors.green : Colors.red)),
+                Text(isOnline ? 'Online 🟢' : 'Offline 🔴', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: isOnline ? Colors.green : Colors.red)),
                 Switch(value: isOnline, activeColor: Colors.green, onChanged: _toggleOnlineState),
               ],
             ),
+          ),
+          IconButton(
+            icon: const CircleAvatar(backgroundColor: Color(0xFF4F46E5), child: Icon(Icons.person, color: Colors.white, size: 20)),
+            tooltip: 'मेरी प्रोफाइल और बिजनेस',
+            onPressed: () => _showPartnerProfileModal(context),
           ),
         ],
       ),
@@ -1088,9 +1247,11 @@ class _PartnerDashboardScreenState extends State<PartnerDashboardScreen> {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(gig.serviceName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF4F46E5))),
-                                Text(gig.rate, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.green)),
+                                Text('₹${gig.calculatedTotal}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.green)),
                               ],
                             ),
+                            const SizedBox(height: 4),
+                            Text('तारीख/समय: ${gig.formattedDate}', style: const TextStyle(fontSize: 12, color: Colors.indigo, fontWeight: FontWeight.bold)),
                             const SizedBox(height: 8),
                             Row(
                               children: [
@@ -1132,7 +1293,7 @@ class _PartnerDashboardScreenState extends State<PartnerDashboardScreen> {
 }
 
 // ============================================================================
-// 8. ADMIN DASHBOARD
+// 8. ADMIN DASHBOARD (WITH EDIT SERVICE RATE BUTTON & REPORT)
 // ============================================================================
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -1195,12 +1356,142 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
     );
   }
 
+  // सर्विस एडिट करने का डायलॉग (नाम और रेट घटाने-बढ़ाने के लिए)
+  void _showEditServiceModal(ServiceItem service) {
+    final TextEditingController nameController = TextEditingController(text: service.name);
+    final TextEditingController rateController = TextEditingController(text: service.rate);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('${service.name} एडिट करें'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: nameController, decoration: const InputDecoration(labelText: 'सर्विस का नाम', border: OutlineInputBorder())),
+            const SizedBox(height: 12),
+            TextField(controller: rateController, decoration: const InputDecoration(labelText: 'रेट (जैसे ₹150/कपड़ा या ₹250/घंटा)', border: OutlineInputBorder())),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('रद्द करें')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF4F46E5)),
+            onPressed: () async {
+              String name = nameController.text.trim();
+              String rate = rateController.text.trim();
+              if (name.isEmpty || rate.isEmpty) return;
+
+              await _servicesRef.child(service.id).update({
+                'name': name,
+                'rate': rate,
+              });
+
+              if (mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('सर्विस का रेट और नाम अपडेट हो गया!'), backgroundColor: Colors.green));
+              }
+            },
+            child: const Text('अपडेट करें', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _togglePartnerBlockStatus(String phone, String currentStatus) async {
     String newStatus = (currentStatus == 'BLOCKED') ? 'APPROVED' : 'BLOCKED';
     await _partnersRef.child(phone).update({'status': newStatus});
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('पार्टनर (+91 $phone) स्टेटस बदल दिया गया: $newStatus')));
     }
+  }
+
+  void _showWorkerDetailReport(BuildContext context, PartnerProfile partner) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(24),
+          child: StreamBuilder(
+            stream: _ordersRef.onValue,
+            builder: (context, snapshot) {
+              double workerTotalBiz = 0;
+              int workerJobsCount = 0;
+              List<GigBooking> workerGigs = [];
+
+              if (snapshot.hasData && snapshot.data?.snapshot.value != null) {
+                Map map = (snapshot.data!.snapshot.value as Map);
+                map.forEach((k, v) {
+                  var g = GigBooking.fromMap(k, v);
+                  if (g.partnerPhone == partner.phone && g.status == 'ACCEPTED') {
+                    workerTotalBiz += g.calculatedTotal;
+                    workerJobsCount++;
+                    workerGigs.add(g);
+                  }
+                });
+              }
+
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('${partner.name} (${partner.phone})', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF4F46E5))),
+                  Text('हुनर: ${partner.skillCategory} | पता: ${partner.address}', style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                  const Divider(height: 20),
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(color: Colors.green.shade50, borderRadius: BorderRadius.circular(12)),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        Column(
+                          children: [
+                            const Text('कुल काम किए', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                            Text('$workerJobsCount', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+                          ],
+                        ),
+                        Container(height: 25, width: 1, color: Colors.green.shade200),
+                        Column(
+                          children: [
+                            const Text('कुल बिजनेस (Total)', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                            Text('₹$workerTotalBiz', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.green)),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('तारीख-दर-तारीख काम का हिसाब (Date-wise Report):', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    height: 220,
+                    child: workerGigs.isEmpty
+                        ? const Center(child: Text('इस वर्कर ने अभी कोई काम नहीं किया।', style: TextStyle(color: Colors.grey)))
+                        : ListView.builder(
+                            itemCount: workerGigs.length,
+                            itemBuilder: (context, index) {
+                              var g = workerGigs[index];
+                              return Card(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                child: ListTile(
+                                  title: Text(g.serviceName, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                                  subtitle: Text('दिनांक: ${g.formattedDate}\nविवरण: ${g.workRequirement}', style: const TextStyle(fontSize: 11)),
+                                  trailing: Text('₹${g.calculatedTotal}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              );
+            },
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -1224,7 +1515,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
       body: TabBarView(
         controller: _tabController,
         children: [
-          // TAB 1: ALL LIVE GIGS TRACKING
+          // TAB 1: ALL LIVE GIGS
           StreamBuilder(
             stream: _ordersRef.onValue,
             builder: (context, snapshot) {
@@ -1234,56 +1525,111 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
 
               Map map = (snapshot.data!.snapshot.value as Map);
               List<GigBooking> allGigs = [];
-              map.forEach((k, v) => allGigs.add(GigBooking.fromMap(k, v)));
+              double totalRevenue = 0;
+              double totalAdminCommission = 0;
 
-              return ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: allGigs.length,
-                itemBuilder: (context, index) {
-                  var gig = allGigs[index];
-                  bool isAccepted = gig.status == 'ACCEPTED';
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(gig.serviceName, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                              Chip(
-                                label: Text(gig.status, style: const TextStyle(color: Colors.white, fontSize: 10)),
-                                backgroundColor: isAccepted ? Colors.green : Colors.orange,
-                              ),
-                            ],
-                          ),
-                          Text('कस्टमर: ${gig.customerName} (+91 ${gig.customerPhone})', style: const TextStyle(fontSize: 13)),
-                          Text('पता: ${gig.addressSector}, ${gig.fullAddress}', style: const TextStyle(fontSize: 13, color: Colors.grey)),
-                          const SizedBox(height: 4),
-                          Text('विवरण: ${gig.workRequirement}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF4F46E5))),
-                          const Divider(height: 20),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                isAccepted ? 'बुक किया: ${gig.partnerName} (+91 ${gig.partnerPhone})' : 'पार्टनर: अभी एक्सेप्ट नहीं हुआ',
-                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: isAccepted ? Colors.green : Colors.red),
-                              ),
-                              Text('OTP: ${gig.paymentOtp}', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF4F46E5))),
-                            ],
-                          ),
-                        ],
-                      ),
+              map.forEach((k, v) {
+                var g = GigBooking.fromMap(k, v);
+                allGigs.add(g);
+                if (g.status == 'ACCEPTED') {
+                  totalRevenue += g.calculatedTotal;
+                  totalAdminCommission += g.adminCommission;
+                }
+              });
+
+              return Column(
+                children: [
+                  Container(
+                    margin: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF4F46E5),
+                      borderRadius: BorderRadius.circular(16),
                     ),
-                  );
-                },
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        Column(
+                          children: [
+                            const Text('कुल पूरा बिजनेस', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                            const SizedBox(height: 4),
+                            Text('₹$totalRevenue', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                        Container(height: 30, width: 1, color: Colors.white54),
+                        Column(
+                          children: [
+                            const Text('आपका कमीशन (15%)', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                            const SizedBox(height: 4),
+                            Text('₹$totalAdminCommission', style: const TextStyle(color: Colors.greenAccent, fontSize: 18, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  Expanded(
+                    child: ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: allGigs.length,
+                      itemBuilder: (context, index) {
+                        var gig = allGigs[index];
+                        bool isAccepted = gig.status == 'ACCEPTED';
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(gig.serviceName, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                    Chip(
+                                      label: Text(gig.status, style: const TextStyle(color: Colors.white, fontSize: 10)),
+                                      backgroundColor: isAccepted ? Colors.green : Colors.orange,
+                                    ),
+                                  ],
+                                ),
+                                Text('तारीख व समय: ${gig.formattedDate}', style: const TextStyle(fontSize: 12, color: Colors.indigo, fontWeight: FontWeight.bold)),
+                                const SizedBox(height: 4),
+                                Text('कस्टमर: ${gig.customerName} (+91 ${gig.customerPhone})', style: const TextStyle(fontSize: 13)),
+                                Text('पता: ${gig.addressSector}, ${gig.fullAddress}', style: const TextStyle(fontSize: 13, color: Colors.grey)),
+                                const SizedBox(height: 4),
+                                Text('विवरण: ${gig.workRequirement}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF4F46E5))),
+                                const SizedBox(height: 4),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text('कुल राशि: ₹${gig.calculatedTotal}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
+                                    Text('कमीशन: ₹${gig.adminCommission}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.indigo)),
+                                  ],
+                                ),
+                                const Divider(height: 20),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      isAccepted ? 'कारीगर: ${gig.partnerName} (+91 ${gig.partnerPhone})' : 'कारीगर: अभी असाइन नहीं हुआ',
+                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: isAccepted ? Colors.green : Colors.red),
+                                    ),
+                                    Text('OTP: ${gig.paymentOtp}', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF4F46E5))),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
               );
             },
           ),
 
-          // TAB 2: PARTNER DIRECTORY & ID BLOCK SYSTEM
+          // TAB 2: WORKER DIRECTORY
           StreamBuilder(
             stream: _partnersRef.onValue,
             builder: (context, snapshot) {
@@ -1303,17 +1649,37 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                   bool isBlocked = p.status == 'BLOCKED';
                   return Card(
                     margin: const EdgeInsets.only(bottom: 12),
-                    child: ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: isBlocked ? Colors.red : Colors.green,
-                        child: Text(p.name.isNotEmpty ? p.name[0] : 'W', style: const TextStyle(color: Colors.white)),
-                      ),
-                      title: Text('${p.name} (+91 ${p.phone})', style: const TextStyle(fontWeight: FontWeight.bold)),
-                      subtitle: Text('हुनर: ${p.skillCategory}\nपता: ${p.address} | स्टेटस: ${p.status}'),
-                      trailing: ElevatedButton(
-                        style: ElevatedButton.styleFrom(backgroundColor: isBlocked ? Colors.green : Colors.red),
-                        onPressed: () => _togglePartnerBlockStatus(p.phone, p.status),
-                        child: Text(isBlocked ? 'Unblock' : 'Block ID', style: const TextStyle(color: Colors.white, fontSize: 11)),
+                    child: InkWell(
+                      onTap: () => _showWorkerDetailReport(context, p),
+                      borderRadius: BorderRadius.circular(16),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              backgroundColor: isBlocked ? Colors.red : Colors.green,
+                              child: Text(p.name.isNotEmpty ? p.name[0] : 'W', style: const TextStyle(color: Colors.white)),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('${p.name} (+91 ${p.phone})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                                  const SizedBox(height: 2),
+                                  Text('हुनर: ${p.skillCategory} | पता: ${p.address}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                                  const SizedBox(height: 2),
+                                  Text('स्टेटस: ${p.status} (क्लिक करके रिपोर्ट देखें)', style: const TextStyle(fontSize: 11, color: Color(0xFF4F46E5), fontWeight: FontWeight.bold)),
+                                ],
+                              ),
+                            ),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(backgroundColor: isBlocked ? Colors.green : Colors.red),
+                              onPressed: () => _togglePartnerBlockStatus(p.phone, p.status),
+                              child: Text(isBlocked ? 'Unblock' : 'Block', style: const TextStyle(color: Colors.white, fontSize: 10)),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   );
@@ -1322,7 +1688,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
             },
           ),
 
-          // TAB 3: DYNAMIC SERVICES CONTROL
+          // TAB 3: SERVICES CONTROL (WITH EDIT & DELETE BUTTONS)
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -1337,7 +1703,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Align(alignment: Alignment.centerLeft, child: Text('वर्तमान लाइव सर्विसेज:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
+                const Align(alignment: Alignment.centerLeft, child: Text('वर्तमान लाइव सर्विसेज (Edit / Delete):', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
                 const SizedBox(height: 8),
                 Expanded(
                   child: StreamBuilder(
@@ -1356,12 +1722,24 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                         itemBuilder: (context, index) {
                           var s = services[index];
                           return Card(
+                            margin: const EdgeInsets.only(bottom: 10),
                             child: ListTile(
                               title: Text(s.name, style: const TextStyle(fontWeight: FontWeight.bold)),
                               subtitle: Text(s.rate, style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
-                              trailing: IconButton(
-                                icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
-                                onPressed: () => _servicesRef.child(s.id).remove(),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.edit_rounded, color: Color(0xFF4F46E5)),
+                                    tooltip: 'रेट या नाम एडिट करें',
+                                    onPressed: () => _showEditServiceModal(s), // एडिट बटन
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
+                                    tooltip: 'डिलीट करें',
+                                    onPressed: () => _servicesRef.child(s.id).remove(),
+                                  ),
+                                ],
                               ),
                             ),
                           );
@@ -1381,7 +1759,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
 
 // ============================================================================
 // 9. BLOCKED ACCOUNT SCREEN
-// ============================================================================
+-- ============================================================================
 class BlockedAccountScreen extends StatelessWidget {
   final String phone;
   const BlockedAccountScreen({super.key, required this.phone});
@@ -1402,7 +1780,7 @@ class BlockedAccountScreen extends StatelessWidget {
               const Text('आपकी आईडी लॉक कर दी गई है!', textAlign: TextAlign.center, style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.red)),
               const SizedBox(height: 12),
               Text(
-                'मोबाइल नंबर (+91 $phone) ने नियमों का उल्लंघन किया है (जैसे नंबर शेयरिंग या डायरेक्ट कैश बाईपास)। एडमिन की अनुमति के बिना आप लॉगिन नहीं कर सकते।',
+                'मोबाइल नंबर (+91 $phone) ने नियमों का उल्लंघन किया है। एडमिन की अनुमति के बिना आप लॉगिन नहीं कर सकते।',
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: Colors.black87, fontSize: 13, height: 1.5),
               ),
