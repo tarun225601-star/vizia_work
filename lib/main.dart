@@ -7,9 +7,6 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-// ============================================================================
-// 1. APP ENTRY POINT & FIREBASE INITIALIZATION
-// ============================================================================
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
@@ -66,9 +63,6 @@ class EndoworkMasterApp extends StatelessWidget {
   }
 }
 
-// ============================================================================
-// 2. DATA MODELS
-// ============================================================================
 class ServiceItem {
   final String id;
   final String name;
@@ -237,9 +231,6 @@ class PartnerProfile {
   }
 }
 
-// ============================================================================
-// 3. SPLASH SCREEN
-// ============================================================================
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -340,9 +331,6 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 }
 
-// ============================================================================
-// 4. AUTHENTICATION SCREENS
-// ============================================================================
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -499,9 +487,6 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   }
 }
 
-// ============================================================================
-// 5. ROLE SELECTION & PARTNER ONBOARDING
-// ============================================================================
 class RoleSelectionScreen extends StatelessWidget {
   final String phone;
   const RoleSelectionScreen({super.key, required this.phone});
@@ -656,9 +641,6 @@ class RoleSelectionScreen extends StatelessWidget {
   }
 }
 
-// ============================================================================
-// 6. CUSTOMER DASHBOARD
-// ============================================================================
 class CustomerHomeScreen extends StatefulWidget {
   final String userPhone;
   const CustomerHomeScreen({super.key, required this.userPhone});
@@ -994,9 +976,6 @@ class CustomerOrdersListScreen extends StatelessWidget {
   }
 }
 
-// ============================================================================
-// 7. PARTNER DASHBOARD
-// ============================================================================
 class PartnerDashboardScreen extends StatefulWidget {
   final String partnerPhone;
   const PartnerDashboardScreen({super.key, required this.partnerPhone});
@@ -1292,9 +1271,6 @@ class _PartnerDashboardScreenState extends State<PartnerDashboardScreen> {
   }
 }
 
-// ============================================================================
-// 8. ADMIN DASHBOARD (WITH EDIT SERVICE RATE BUTTON & REPORT)
-// ============================================================================
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
 
@@ -1356,7 +1332,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
     );
   }
 
-  // सर्विस एडिट करने का डायलॉग (नाम और रेट घटाने-बढ़ाने के लिए)
   void _showEditServiceModal(ServiceItem service) {
     final TextEditingController nameController = TextEditingController(text: service.name);
     final TextEditingController rateController = TextEditingController(text: service.rate);
@@ -1515,7 +1490,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
       body: TabBarView(
         controller: _tabController,
         children: [
-          // TAB 1: ALL LIVE GIGS
           StreamBuilder(
             stream: _ordersRef.onValue,
             builder: (context, snapshot) {
@@ -1629,7 +1603,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
             },
           ),
 
-          // TAB 2: WORKER DIRECTORY
           StreamBuilder(
             stream: _partnersRef.onValue,
             builder: (context, snapshot) {
@@ -1688,7 +1661,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
             },
           ),
 
-          // TAB 3: SERVICES CONTROL (WITH EDIT & DELETE BUTTONS)
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -1732,7 +1704,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                                   IconButton(
                                     icon: const Icon(Icons.edit_rounded, color: Color(0xFF4F46E5)),
                                     tooltip: 'रेट या नाम एडिट करें',
-                                    onPressed: () => _showEditServiceModal(s), // एडिट बटन
+                                    onPressed: () => _showEditServiceModal(s),
                                   ),
                                   IconButton(
                                     icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
@@ -1757,9 +1729,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
   }
 }
 
-// ============================================================================
-// 9. BLOCKED ACCOUNT SCREEN
--- ============================================================================
 class BlockedAccountScreen extends StatelessWidget {
   final String phone;
   const BlockedAccountScreen({super.key, required this.phone});
