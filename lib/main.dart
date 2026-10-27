@@ -1068,7 +1068,7 @@ class _PartnerDashboardScreenState extends State<PartnerDashboardScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.between,
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(gig.serviceName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF4F46E5))),
                                 Text(gig.rate, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.green)),
@@ -1152,4 +1152,251 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF4F46E5)),
             onPressed: () async {
-              String name = nameController.text.
+              String name = nameController.text.trim();
+              String rate = rateController.text.trim();
+              if (name.isEmpty || rate.isEmpty) return;
+
+              String key = _servicesRef.push().key!;
+              ServiceItem item = ServiceItem(id: key, name: name, rate: rate, category: category, iconName: 'build');
+              await _servicesRef.child(key).set(item.toMap());
+
+              if (mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('नई सर्विस सफलतापूर्वक ऐड हो गई!')));
+              }
+            },
+            child: const Text('सेव करें', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _togglePartnerBlockStatus(String phone, String currentStatus) async {
+    String newStatus = (currentStatus == 'BLOCKED') ? 'APPROVED' : 'BLOCKED';
+    await _partnersRef.child(phone).update({'status': newStatus});
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('पार्टनर (+91 $phone) स्टेटस बदल दिया गया: $newStatus')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Tarun - Admin Control Panel'),
+        backgroundColor: Colors.white,
+        bottom: TabBar(
+          controller: _tabController,
+          labelColor: const Color(0xFF4F46E5),
+          unselectedColor: Colors.grey,
+          indicatorColor: const Color(0xFF4F46E5),
+          tabs: const [
+            Tab(icon: Icon(Icons.receipt_long_rounded), text: 'सभी गिग्स'),
+            Tab(icon: Icon(Icons.female_rounded), text: 'वर्कर डायरेक्टरी'),
+            Tab(icon: Icon(Icons.add_circle_outline_rounded), text: 'सर्विस कंट्रोल'),
+          ],
+        ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          // TAB 1: ALL LIVE GIGS TRACKING
+          StreamBuilder(
+            stream: _ordersRef.onValue,
+            builder: (context, snapshot) {
+              if (!snapshot.hasData || snapshot.data?.snapshot.value == null) {
+                return const Center(child: Text('कोई लाइव गिग डेटा उपलब्ध नहीं है।'));
+              }
+
+              Map map = (snapshot.data!.snapshot.value as Map);
+              List<GigBooking> allGigs = [];
+              map.forEach((k, v) => allGigs.add(GigBooking.fromMap(k, v)));
+
+              return ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: allGigs.length,
+                itemBuilder: (context, index) {
+                  var gig = allGigs[index];
+                  bool isAccepted = gig.status == 'ACCEPTED';
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(gig.serviceName, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                              Chip(
+                                label: Text(gig.status, style: const TextStyle(color: Colors.white, fontSize: 10)),
+                                backgroundColor: isAccepted ? Colors.green : Colors.orange,
+                              ),
+                            ],
+                          ),
+                          Text('कस्टमर: ${gig.customerName} (+91 ${gig.customerPhone})', style: const TextStyle(fontSize: 13)),
+                          Text('पता: ${gig.addressSector}, ${gig.fullAddress}', style: const TextStyle(fontSize: 13, color: Colors.grey)),
+                          const Divider(height: 20),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                isAccepted ? 'बुक किया: ${gig.partnerName} (+91 ${gig.partnerPhone})' : 'पार्टनर: अभी एक्सेप्ट नहीं हुआ',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: isAccepted ? Colors.green : Colors.red),
+                              ),
+                              Text('OTP: ${gig.paymentOtp}', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF4F46E5))),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+
+          // TAB 2: PARTNER DIRECTORY & ID BLOCK SYSTEM
+          StreamBuilder(
+            stream: _partnersRef.onValue,
+            builder: (context, snapshot) {
+              if (!snapshot.hasData || snapshot.data?.snapshot.value == null) {
+                return const Center(child: Text('कोई पंजीकृत वर्कर नहीं मिला।'));
+              }
+
+              Map map = (snapshot.data!.snapshot.value as Map);
+              List<PartnerProfile> partners = [];
+              map.forEach((k, v) => partners.add(PartnerProfile.fromMap(k, v)));
+
+              return ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: partners.length,
+                itemBuilder: (context, index) {
+                  var p = partners[index];
+                  bool isBlocked = p.status == 'BLOCKED';
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    child: ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: isBlocked ? Colors.red : Colors.green,
+                        child: Text(p.name.isNotEmpty ? p.name[0] : 'W', style: const TextStyle(color: Colors.white)),
+                      ),
+                      title: Text('${p.name} (+91 ${p.phone})', style: const TextStyle(fontWeight: FontWeight.bold)),
+                      subtitle: Text('हुनर: ${p.skillCategory}\nपता: ${p.address} | स्टेटस: ${p.status}'),
+                      trailing: ElevatedButton(
+                        style: ElevatedButton.styleFrom(backgroundColor: isBlocked ? Colors.green : Colors.red),
+                        onPressed: () => _togglePartnerBlockStatus(p.phone, p.status),
+                        child: Text(isBlocked ? 'Unblock' : 'Block ID', style: const TextStyle(color: Colors.white, fontSize: 11)),
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+
+          // TAB 3: DYNAMIC SERVICES CONTROL
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              children: [
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF4F46E5), padding: const EdgeInsets.all(16)),
+                    icon: const Icon(Icons.add, color: Colors.white),
+                    label: const Text('+ नई सर्विस जोड़ें (सिलाई / सफाई आदि)', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                    onPressed: _showAddServiceModal,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Align(alignment: Alignment.centerLeft, child: Text('वर्तमान लाइव सर्विसेज:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: StreamBuilder(
+                    stream: _servicesRef.onValue,
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData || snapshot.data?.snapshot.value == null) {
+                        return const Center(child: Text('कोई सर्विस उपलब्ध नहीं है।'));
+                      }
+
+                      Map map = (snapshot.data!.snapshot.value as Map);
+                      List<ServiceItem> services = [];
+                      map.forEach((k, v) => services.add(ServiceItem.fromMap(k, v)));
+
+                      return ListView.builder(
+                        itemCount: services.length,
+                        itemBuilder: (context, index) {
+                          var s = services[index];
+                          return Card(
+                            child: ListTile(
+                              title: Text(s.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                              subtitle: Text(s.rate, style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                              trailing: IconButton(
+                                icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
+                                onPressed: () => _servicesRef.child(s.id).remove(),
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// 9. BLOCKED ACCOUNT SCREEN
+// ============================================================================
+class BlockedAccountScreen extends StatelessWidget {
+  final String phone;
+  const BlockedAccountScreen({super.key, required this.phone});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.red.shade50,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(32.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              const Icon(Icons.block_rounded, color: Colors.red, size: 80),
+              const SizedBox(height: 24),
+              const Text('आपकी आईडी लॉक कर दी गई है!', textAlign: TextAlign.center, style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.red)),
+              const SizedBox(height: 12),
+              Text(
+                'मोबाइल नंबर (+91 $phone) ने नियमों का उल्लंघन किया है (जैसे नंबर शेयरिंग या डायरेक्ट कैश बाईपास)। एडमिन की अनुमति के बिना आप लॉगिन नहीं कर सकते।',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.black87, fontSize: 13, height: 1.5),
+              ),
+              const SizedBox(height: 32),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red, padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14)),
+                onPressed: () async {
+                  SharedPreferences prefs = await SharedPreferences.getInstance();
+                  await prefs.clear();
+                  if (context.mounted) {
+                    Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const LoginScreen()));
+                  }
+                },
+                child: const Text('लॉगआउट करें', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
