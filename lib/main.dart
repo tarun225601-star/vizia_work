@@ -69,6 +69,7 @@ class ServiceItem {
   final String rate;
   final String category;
   final String iconName;
+  final List<dynamic> subItems;
 
   ServiceItem({
     required this.id,
@@ -76,6 +77,7 @@ class ServiceItem {
     required this.rate,
     required this.category,
     required this.iconName,
+    required this.subItems,
   });
 
   Map<String, dynamic> toMap() {
@@ -85,6 +87,7 @@ class ServiceItem {
       'rate': rate,
       'category': category,
       'iconName': iconName,
+      'subItems': subItems,
     };
   }
 
@@ -94,7 +97,8 @@ class ServiceItem {
       name: map['name'] ?? '',
       rate: map['rate'] ?? '',
       category: map['category'] ?? 'General',
-      iconName: map['iconName'] ?? 'cleaning_services',
+      iconName: map['iconName'] ?? 'checkroom',
+      subItems: map['subItems'] ?? [],
     );
   }
 }
@@ -250,7 +254,7 @@ class _SplashScreenState extends State<SplashScreen> {
     String? phone = prefs.getString('user_phone');
     String? role = prefs.getString('user_role');
 
-    _seedDefaultServicesIfNecessary();
+    await _seedDefaultServicesIfNecessary();
 
     await Future.delayed(const Duration(milliseconds: 1500));
     if (!mounted) return;
@@ -283,20 +287,68 @@ class _SplashScreenState extends State<SplashScreen> {
     }
   }
 
-  void _seedDefaultServicesIfNecessary() async {
+  Future<void> _seedDefaultServicesIfNecessary() async {
     DatabaseReference ref = FirebaseDatabase.instance.ref().child('services');
     var snap = await ref.get();
     if (!snap.exists || snap.value == null) {
-      List<Map<String, String>> defaults = [
-        {'name': 'सफाई (House Cleaning)', 'rate': '₹200/घंटा', 'category': 'Cleaning', 'iconName': 'cleaning_services'},
-        {'name': 'कुकिंग (Home Cook)', 'rate': '₹350/विज़िट', 'category': 'Cooking', 'iconName': 'restaurant'},
-        {'name': 'ब्यूटी & होम सैलून (Salon)', 'rate': 'पैकेज अनुसार', 'category': 'Beauty', 'iconName': 'face'},
-        {'name': 'सिलाई & फिटिंग (Tailoring)', 'rate': '₹150/कपड़ा', 'category': 'Stitching', 'iconName': 'content_cut'},
-        {'name': 'ट्यूशन (Home Tuition)', 'rate': '₹2500/महीना', 'category': 'Tuition', 'iconName': 'menu_book'},
+      List<Map<String, dynamic>> defaults = [
+        {
+          'name': 'बुटीक & सिलाई (Boutique)',
+          'rate': '₹350/सूट',
+          'category': 'Stitching',
+          'iconName': 'checkroom',
+          'subItems': [
+            {'title': 'सूट सिलाई & फिटिंग', 'rate': '₹350/सूट'},
+            {'title': 'ब्लाउज स्टिचिंग', 'rate': '₹250/पीस'},
+            {'title': 'नॉर्मल फिटिंग / अल्टरेशन', 'rate': '₹100/काम'}
+          ]
+        },
+        {
+          'name': 'घर पर प्रेस (Home Ironing)',
+          'rate': '₹30/जोड़ी',
+          'category': 'Ironing',
+          'iconName': 'iron',
+          'subItems': [
+            {'title': 'सामान्य कपड़े (शर्ट-पैंट प्रति जोड़ी)', 'rate': '₹30/जोड़ी'},
+            {'title': 'भारी साड़ी (Heavy Saree)', 'rate': '₹50/पीस'},
+            {'title': 'कोट या ब्लेज़र (Coat / Blazer)', 'rate': '₹60/पीस'},
+            {'title': 'लेडीज सूट (Heavy Suit)', 'rate': '₹40/जोड़ी'}
+          ]
+        },
+        {
+          'name': 'कार वॉश & पॉलिश (Car Wash)',
+          'rate': '₹400/2 कार',
+          'category': 'Car Care',
+          'iconName': 'directions_car',
+          'subItems': [
+            {'title': 'कार वॉश & पॉलिश (कम से कम 2 कार)', 'rate': '₹400/2 कार'},
+            {'title': '3 कार डीप क्लीनिंग पैकेज', 'rate': '₹600/3 कार'}
+          ]
+        },
+        {
+          'name': 'सफाई (House Cleaning)',
+          'rate': '₹200/घंटा',
+          'category': 'Cleaning',
+          'iconName': 'cleaning_services',
+          'subItems': [
+            {'title': 'सामान्य झाड़ू-पोछा (प्रति घंटा)', 'rate': '₹200/घंटा'},
+            {'title': 'डीप हाउस क्लीनिंग (Full House)', 'rate': '₹1000/विज़िट'}
+          ]
+        },
+        {
+          'name': 'कुकिंग (Home Cook)',
+          'rate': '₹350/विज़िट',
+          'category': 'Cooking',
+          'iconName': 'restaurant',
+          'subItems': [
+            {'title': 'खाना बनाना (एक समय का खाना)', 'rate': '₹350/विज़िट'},
+            {'title': 'स्पेशल पार्टी कुकिंग', 'rate': '₹1200/विज़िट'}
+          ]
+        },
       ];
       for (var s in defaults) {
         String key = ref.push().key!;
-        ref.child(key).set(s);
+        await ref.child(key).set(s);
       }
     }
   }
@@ -526,7 +578,7 @@ class RoleSelectionScreen extends StatelessWidget {
               DropdownButtonFormField<String>(
                 value: selectedSkill,
                 decoration: InputDecoration(labelText: 'मुख्य हुनर (Skill)', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
-                items: ['सफाई (Cleaning)', 'कुकिंग (Cooking)', 'ब्यूटी (Salon)', 'सिलाई (Tailoring)', 'ट्यूशन (Tuition)', 'ऑल-राउंडर'].map((s) {
+                items: ['सफाई (Cleaning)', 'कुकिंग (Cooking)', 'बुटीक & सिलाई (Boutique)', 'घर पर प्रेस (Ironing)', 'कार वॉश (Car Wash)', 'ऑल-राउंडर'].map((s) {
                   return DropdownMenuItem(value: s, child: Text(s));
                 }).toList(),
                 onChanged: (val) { if (val != null) selectedSkill = val; },
@@ -596,7 +648,7 @@ class RoleSelectionScreen extends StatelessWidget {
             _buildRoleCard(
               context,
               title: '2. काम करना है (ENDOWORK Partner)',
-              subtitle: 'हुनरमंद महिलाएं/लड़कियां। जीरो कमीशन फ्रॉड, डायरेक्ट कंपनी पेमेंट्स।',
+              subtitle: 'हुनरमंद वर्कर। डायरेक्ट कंपनी पेमेंट्स से सुरक्षा।',
               icon: Icons.person_search_rounded,
               color: const Color(0xFF10B981),
               onTap: () => _showPartnerForm(context),
@@ -651,155 +703,6 @@ class CustomerHomeScreen extends StatefulWidget {
 
 class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   final DatabaseReference _servicesRef = FirebaseDatabase.instance.ref().child('services');
-  final DatabaseReference _ordersRef = FirebaseDatabase.instance.ref().child('orders');
-
-  final List<ServiceItem> _fallbackServices = [
-    ServiceItem(id: '1', name: 'सफाई (House Cleaning)', rate: '₹200/घंटा', category: 'Cleaning', iconName: 'cleaning_services'),
-    ServiceItem(id: '2', name: 'कुकिंग (Home Cook)', rate: '₹350/विज़िट', category: 'Cooking', iconName: 'restaurant'),
-    ServiceItem(id: '3', name: 'ब्यूटी & होम सैलून (Salon)', rate: 'पैकेज अनुसार', category: 'Beauty', iconName: 'face'),
-    ServiceItem(id: '4', name: 'सिलाई & फिटिंग (Tailoring)', rate: '₹150/कपड़ा', category: 'Stitching', iconName: 'content_cut'),
-    ServiceItem(id: '5', name: 'ट्यूशन (Home Tuition)', rate: '₹2500/महीना', category: 'Tuition', iconName: 'menu_book'),
-  ];
-
-  void _initiateBookingModal(BuildContext context, ServiceItem service) {
-    final TextEditingController nameController = TextEditingController(text: 'Customer');
-    final TextEditingController addressController = TextEditingController();
-    final TextEditingController noteController = TextEditingController();
-    String selectedSector = 'Sector 15';
-    String selectedQuantity = '2 घंटे / 2 सूट';
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (context) {
-        return Padding(
-          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom + 24, left: 24, right: 24, top: 24),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text('${service.name} बुक करें', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF4F46E5))),
-                Text('रेट: ${service.rate}', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: nameController,
-                  decoration: InputDecoration(labelText: 'आपका नाम', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  value: selectedSector,
-                  decoration: InputDecoration(labelText: 'सेक्टर (Faridabad)', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
-                  items: ['Sector 14', 'Sector 15', 'Sector 16', 'Sector 17'].map((sec) {
-                    return DropdownMenuItem(value: sec, child: Text(sec));
-                  }).toList(),
-                  onChanged: (val) { if (val != null) selectedSector = val; },
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: addressController,
-                  decoration: InputDecoration(labelText: 'कोठी / मकान नंबर और गली एड्रेस', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  value: selectedQuantity,
-                  decoration: InputDecoration(labelText: 'मात्रा / समय चुनें', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
-                  items: [
-                    '1 घंटा / 1 सूट',
-                    '2 घंटे / 2 सूट',
-                    '3 घंटे / 3 सूट',
-                    '4 घंटे / 4 सूट',
-                    'पूरा दिन (Full Day)',
-                    'महीने का पैकेज',
-                  ].map((item) {
-                    return DropdownMenuItem(value: item, child: Text(item));
-                  }).toList(),
-                  onChanged: (val) { if (val != null) selectedQuantity = val; },
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: noteController,
-                  maxLines: 2,
-                  decoration: InputDecoration(
-                    labelText: 'यहाँ लिखकर बताएं (जैसे 2 सूट की फिटिंग या झाड़ू-पोछा)',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF4F46E5), padding: const EdgeInsets.symmetric(vertical: 16)),
-                  onPressed: () async {
-                    String name = nameController.text.trim();
-                    String address = addressController.text.trim();
-                    String customNote = noteController.text.trim();
-                    if (address.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('कृपया पूरा एड्रेस दर्ज करें!')));
-                      return;
-                    }
-
-                    double baseRate = 200.0;
-                    if (service.rate.contains('150')) baseRate = 150.0;
-                    else if (service.rate.contains('350')) baseRate = 350.0;
-                    else if (service.rate.contains('2500')) baseRate = 2500.0;
-                    else if (service.rate.contains('पैकेज')) baseRate = 500.0;
-
-                    int multiplier = 1;
-                    if (selectedQuantity.startsWith('2')) multiplier = 2;
-                    else if (selectedQuantity.startsWith('3')) multiplier = 3;
-                    else if (selectedQuantity.startsWith('4')) multiplier = 4;
-                    else if (selectedQuantity.contains('पूरा दिन')) multiplier = 6;
-                    else if (selectedQuantity.contains('महीने')) multiplier = 1;
-
-                    double calculatedTotal = baseRate * multiplier;
-                    double adminCommission = calculatedTotal * 0.15;
-
-                    String orderId = _ordersRef.push().key!;
-                    String generatedOtp = (1000 + Random().nextInt(9000)).toString();
-
-                    DateTime now = DateTime.now();
-                    String formattedDate = "${now.day}/${now.month}/${now.year} - ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
-
-                    String finalRequirement = 'मात्रा/समय: $selectedQuantity | विवरण: ${customNote.isEmpty ? "सामान्य" : customNote}';
-
-                    GigBooking booking = GigBooking(
-                      orderId: orderId,
-                      serviceName: service.name,
-                      rate: service.rate,
-                      customerPhone: widget.userPhone,
-                      customerName: name,
-                      addressSector: selectedSector,
-                      fullAddress: address,
-                      workRequirement: finalRequirement,
-                      calculatedTotal: calculatedTotal,
-                      adminCommission: adminCommission,
-                      status: 'PENDING',
-                      partnerPhone: 'None',
-                      partnerName: 'Pending Acceptance',
-                      paymentOtp: generatedOtp,
-                      isPaidToCompany: false,
-                      timestamp: now.millisecondsSinceEpoch,
-                      formattedDate: formattedDate,
-                    );
-
-                    await _ordersRef.child(orderId).set(booking.toMap());
-
-                    if (context.mounted) {
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('ऑर्डर बुक हुआ! कुल: ₹$calculatedTotal'), backgroundColor: Colors.green),
-                      );
-                    }
-                  },
-                  child: const Text('ऑर्डर कंफर्म करें (Book Order)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -847,22 +750,22 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
               ),
             ),
             const SizedBox(height: 24),
-            const Text('उपलब्ध सेवाएं (Book Domestic Help):', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const Text('उपलब्ध श्रेणियां (Service Categories):', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
 
             StreamBuilder(
               stream: _servicesRef.onValue,
               builder: (context, snapshot) {
-                List<ServiceItem> services = _fallbackServices;
+                if (!snapshot.hasData || snapshot.data?.snapshot.value == null) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-                if (snapshot.hasData && snapshot.data?.snapshot.value != null) {
-                  try {
-                    Map map = (snapshot.data!.snapshot.value as Map);
-                    services = [];
-                    map.forEach((k, v) => services.add(ServiceItem.fromMap(k, v)));
-                  } catch (e) {
-                    services = _fallbackServices;
-                  }
+                Map map = (snapshot.data!.snapshot.value as Map);
+                List<ServiceItem> services = [];
+                map.forEach((k, v) => services.add(ServiceItem.fromMap(k, v)));
+
+                if (services.isEmpty) {
+                  return const Center(child: Text('कोई सर्विस उपलब्ध नहीं है।'));
                 }
 
                 return GridView.builder(
@@ -875,7 +778,14 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                     return Card(
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                       child: InkWell(
-                        onTap: () => _initiateBookingModal(context, s),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ServiceSubListScreen(service: s, userPhone: widget.userPhone),
+                            ),
+                          );
+                        },
                         borderRadius: BorderRadius.circular(20),
                         child: Padding(
                           padding: const EdgeInsets.all(16.0),
@@ -885,12 +795,12 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                               Container(
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(color: const Color(0xFF4F46E5).withOpacity(0.1), shape: BoxShape.circle),
-                                child: const Icon(Icons.cleaning_services_rounded, color: Color(0xFF4F46E5), size: 32),
+                                child: const Icon(Icons.checkroom_rounded, color: Color(0xFF4F46E5), size: 32),
                               ),
                               const SizedBox(height: 12),
                               Text(s.name, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13), maxLines: 2, overflow: TextOverflow.ellipsis),
                               const SizedBox(height: 4),
-                              Text(s.rate, style: const TextStyle(fontSize: 12, color: Colors.green, fontWeight: FontWeight.bold)),
+                              Text('क्लिक करके अंदर सूची देखें ➔', style: TextStyle(fontSize: 11, color: Colors.indigo.shade600, fontWeight: FontWeight.bold)),
                             ],
                           ),
                         ),
@@ -903,6 +813,167 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class ServiceSubListScreen extends StatelessWidget {
+  final ServiceItem service;
+  final String userPhone;
+  const ServiceSubListScreen({super.key, required this.service, required this.userPhone});
+
+  void _initiateBookingModal(BuildContext context, String subItemName, String subRate) {
+    final TextEditingController nameController = TextEditingController(text: 'Customer');
+    final TextEditingController addressController = TextEditingController();
+    final TextEditingController noteController = TextEditingController();
+    String selectedSector = 'Sector 15';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom + 24, left: 24, right: 24, top: 24),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text('$subItemName बुक करें', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF4F46E5))),
+                Text('रेट: $subRate', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: nameController,
+                  decoration: InputDecoration(labelText: 'आपका नाम', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  value: selectedSector,
+                  decoration: InputDecoration(labelText: 'सेक्टर (Faridabad)', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                  items: ['Sector 14', 'Sector 15', 'Sector 16', 'Sector 17'].map((sec) {
+                    return DropdownMenuItem(value: sec, child: Text(sec));
+                  }).toList(),
+                  onChanged: (val) { if (val != null) selectedSector = val; },
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: addressController,
+                  decoration: InputDecoration(labelText: 'कोठी / मकान नंबर और गली एड्रेस', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: noteController,
+                  maxLines: 2,
+                  decoration: InputDecoration(
+                    labelText: 'विशेष विवरण (जैसे कितने कपड़े या कार का विवरण)',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF4F46E5), padding: const EdgeInsets.symmetric(vertical: 16)),
+                  onPressed: () async {
+                    String name = nameController.text.trim();
+                    String address = addressController.text.trim();
+                    String customNote = noteController.text.trim();
+                    if (address.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('कृपया पूरा एड्रेस दर्ज करें!')));
+                      return;
+                    }
+
+                    double baseRate = 300.0;
+                    final RegExp regex = RegExp(r'₹(\d+)');
+                    final match = regex.firstMatch(subRate);
+                    if (match != null) {
+                      baseRate = double.tryParse(match.group(1)!) ?? 300.0;
+                    }
+
+                    double calculatedTotal = baseRate;
+                    double adminCommission = calculatedTotal * 0.15;
+
+                    DatabaseReference ordersRef = FirebaseDatabase.instance.ref().child('orders');
+                    String orderId = ordersRef.push().key!;
+                    String generatedOtp = (1000 + Random().nextInt(9000)).toString();
+
+                    DateTime now = DateTime.now();
+                    String formattedDate = "${now.day}/${now.month}/${now.year} - ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
+
+                    String finalRequirement = 'आइटम: $subItemName | विवरण: ${customNote.isEmpty ? "सामान्य बुकिंग" : customNote}';
+
+                    GigBooking booking = GigBooking(
+                      orderId: orderId,
+                      serviceName: "${service.name} ($subItemName)",
+                      rate: subRate,
+                      customerPhone: userPhone,
+                      customerName: name,
+                      addressSector: selectedSector,
+                      fullAddress: address,
+                      workRequirement: finalRequirement,
+                      calculatedTotal: calculatedTotal,
+                      adminCommission: adminCommission,
+                      status: 'PENDING',
+                      partnerPhone: 'None',
+                      partnerName: 'Pending Acceptance',
+                      paymentOtp: generatedOtp,
+                      isPaidToCompany: false,
+                      timestamp: now.millisecondsSinceEpoch,
+                      formattedDate: formattedDate,
+                    );
+
+                    await ordersRef.child(orderId).set(booking.toMap());
+
+                    if (context.mounted) {
+                      Navigator.pop(context);
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('ऑर्डर बुक हुआ! कुल: ₹$calculatedTotal'), backgroundColor: Colors.green),
+                      );
+                    }
+                  },
+                  child: const Text('ऑर्डर कंफर्म करें (Book Order)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    List<dynamic> items = service.subItems;
+
+    return Scaffold(
+      appBar: AppBar(title: Text(service.name)),
+      body: items.isEmpty
+          ? const Center(child: Text('इस सर्विस में अभी कोई आइटम उपलब्ध नहीं है।'))
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: items.length,
+              itemBuilder: (context, index) {
+                var item = items[index];
+                String title = item['title'] ?? 'आइटम';
+                String rate = item['rate'] ?? '₹100';
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.all(16),
+                    title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    subtitle: Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Text('रेट: $rate', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 14)),
+                    ),
+                    trailing: ElevatedButton(
+                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF4F46E5)),
+                      onPressed: () => _initiateBookingModal(context, title, rate),
+                      child: const Text('बुक करें', style: TextStyle(color: Colors.white)),
+                    ),
+                  ),
+                );
+              },
+            ),
     );
   }
 }
@@ -1293,7 +1364,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
   void _showAddServiceModal() {
     final TextEditingController nameController = TextEditingController();
     final TextEditingController rateController = TextEditingController();
-    String category = 'General';
 
     showDialog(
       context: context,
@@ -1302,9 +1372,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(controller: nameController, decoration: const InputDecoration(labelText: 'सर्विस का नाम (जैसे सिलाई, क्लीनिंग)', border: OutlineInputBorder())),
+            TextField(controller: nameController, decoration: const InputDecoration(labelText: 'सर्विस का नाम (जैसे बुटीक, प्रेस)', border: OutlineInputBorder())),
             const SizedBox(height: 12),
-            TextField(controller: rateController, decoration: const InputDecoration(labelText: 'रेट (जैसे ₹200/घंटा)', border: OutlineInputBorder())),
+            TextField(controller: rateController, decoration: const InputDecoration(labelText: 'शुरुआती रेट (जैसे ₹30/जोड़ी)', border: OutlineInputBorder())),
           ],
         ),
         actions: [
@@ -1317,7 +1387,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
               if (name.isEmpty || rate.isEmpty) return;
 
               String key = _servicesRef.push().key!;
-              ServiceItem item = ServiceItem(id: key, name: name, rate: rate, category: category, iconName: 'build');
+              ServiceItem item = ServiceItem(
+                id: key,
+                name: name,
+                rate: rate,
+                category: 'General',
+                iconName: 'checkroom',
+                subItems: [
+                  {'title': '$name - स्टैंडर्ड', 'rate': rate}
+                ],
+              );
               await _servicesRef.child(key).set(item.toMap());
 
               if (mounted) {
@@ -1345,7 +1424,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
           children: [
             TextField(controller: nameController, decoration: const InputDecoration(labelText: 'सर्विस का नाम', border: OutlineInputBorder())),
             const SizedBox(height: 12),
-            TextField(controller: rateController, decoration: const InputDecoration(labelText: 'रेट (जैसे ₹150/कपड़ा या ₹250/घंटा)', border: OutlineInputBorder())),
+            TextField(controller: rateController, decoration: const InputDecoration(labelText: 'बेस रेट', border: OutlineInputBorder())),
           ],
         ),
         actions: [
@@ -1364,13 +1443,92 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
 
               if (mounted) {
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('सर्विस का रेट और नाम अपडेट हो गया!'), backgroundColor: Colors.green));
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('सर्विस अपडेट हो गई!'), backgroundColor: Colors.green));
               }
             },
             child: const Text('अपडेट करें', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
+    );
+  }
+
+  // एडमिन पैनल से अंदर के प्रोडक्ट्स/सब-आइटम्स को मैनेज करने का डायलॉग
+  void _showManageSubItemsModal(ServiceItem service) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        final TextEditingController titleController = TextEditingController();
+        final TextEditingController itemRateController = TextEditingController();
+
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            List subList = List.from(service.subItems);
+
+            return AlertDialog(
+              title: Text('${service.name} के प्रोडक्ट्स मैनेज करें'),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      height: 180,
+                      child: subList.isEmpty
+                          ? const Center(child: Text('कोई अंदरूनी प्रोडक्ट नहीं है। नीचे से जोड़ें।'))
+                          : ListView.builder(
+                              itemCount: subList.length,
+                              itemBuilder: (context, index) {
+                                var sub = subList[index];
+                                return Card(
+                                  child: ListTile(
+                                    title: Text(sub['title'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                    subtitle: Text('रेट: ${sub['rate']}', style: const TextStyle(color: Colors.green, fontSize: 12)),
+                                    trailing: IconButton(
+                                      icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+                                      onPressed: () async {
+                                        subList.removeAt(index);
+                                        await _servicesRef.child(service.id).update({'subItems': subList});
+                                        setStateDialog(() {});
+                                      },
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                    ),
+                    const Divider(height: 20),
+                    const Text('नया प्रोडक्ट/आइटम जोड़ें:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                    const SizedBox(height: 8),
+                    TextField(controller: titleController, decoration: const InputDecoration(labelText: 'आइटम का नाम (जैसे साड़ी, कोट)', border: OutlineInputBorder(), isDense: true)),
+                    const SizedBox(height: 8),
+                    TextField(controller: itemRateController, decoration: const InputDecoration(labelText: 'रेट (जैसे ₹50/पीस)', border: OutlineInputBorder(), isDense: true)),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF4F46E5)),
+                      onPressed: () async {
+                        String title = titleController.text.trim();
+                        String rate = itemRateController.text.trim();
+                        if (title.isEmpty || rate.isEmpty) return;
+
+                        subList.add({'title': title, 'rate': rate});
+                        await _servicesRef.child(service.id).update({'subItems': subList});
+                        titleController.clear();
+                        itemRateController.clear();
+                        setStateDialog(() {});
+                      },
+                      child: const Text('यह प्रोडक्ट जोड़ें', style: TextStyle(color: Colors.white)),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(context), child: const Text('बंद करें')),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
@@ -1670,12 +1828,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                   child: ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF4F46E5), padding: const EdgeInsets.all(16)),
                     icon: const Icon(Icons.add, color: Colors.white),
-                    label: const Text('+ नई सर्विस जोड़ें (सिलाई / सफाई आदि)', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                    label: const Text('+ नई सर्विस जोड़ें', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
                     onPressed: _showAddServiceModal,
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Align(alignment: Alignment.centerLeft, child: Text('वर्तमान लाइव सर्विसेज (Edit / Delete):', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
+                const Align(alignment: Alignment.centerLeft, child: Text('वर्तमान लाइव सर्विसेज (Edit Products / Delete):', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
                 const SizedBox(height: 8),
                 Expanded(
                   child: StreamBuilder(
@@ -1697,13 +1855,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                             margin: const EdgeInsets.only(bottom: 10),
                             child: ListTile(
                               title: Text(s.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                              subtitle: Text(s.rate, style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                              subtitle: Text('अंदर के प्रोडक्ट्स मैनेज करने के लिए बटन दबाएं', style: const TextStyle(color: Colors.grey, fontSize: 11)),
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   IconButton(
+                                    icon: const Icon(Icons.list_alt_rounded, color: Colors.green),
+                                    tooltip: 'अंदर के प्रोडक्ट्स/आइटम एडिट करें',
+                                    onPressed: () => _showManageSubItemsModal(s),
+                                  ),
+                                  IconButton(
                                     icon: const Icon(Icons.edit_rounded, color: Color(0xFF4F46E5)),
-                                    tooltip: 'रेट या नाम एडिट करें',
+                                    tooltip: 'नाम एडिट करें',
                                     onPressed: () => _showEditServiceModal(s),
                                   ),
                                   IconButton(
