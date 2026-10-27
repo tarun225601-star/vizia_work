@@ -8,7 +8,7 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // ============================================================================
-// 1. APP ENTRY POINT & FIREBASE INITIALIZATION
+// 1. APP ENTRY POINT & FIREBASE INITIALIZATION (EXACT VIZIAWORK URL)
 // ============================================================================
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,9 +21,9 @@ void main() async {
   await Firebase.initializeApp(
     options: const FirebaseOptions(
       apiKey: "AIzaSyDummyKeyForEndoworkProductionReady2026",
-      appId: "1:999888777666:android:endoworkapp",
+      appId: "1:999888777666:android:viziaworkapp",
       messagingSenderId: "999888777666",
-      projectId: "endowork-official",
+      projectId: "viziawork",
       databaseURL: "https://viziawork-default-rtdb.firebaseio.com/",
     ),
   );
@@ -113,6 +113,7 @@ class GigBooking {
   final String customerName;
   final String addressSector;
   final String fullAddress;
+  final String workRequirement; // काम की मात्रा/घंटे और कस्टम विवरण
   final String status;
   final String partnerPhone;
   final String partnerName;
@@ -128,6 +129,7 @@ class GigBooking {
     required this.customerName,
     required this.addressSector,
     required this.fullAddress,
+    required this.workRequirement,
     required this.status,
     required this.partnerPhone,
     required this.partnerName,
@@ -145,6 +147,7 @@ class GigBooking {
       'customerName': customerName,
       'addressSector': addressSector,
       'fullAddress': fullAddress,
+      'workRequirement': workRequirement,
       'status': status,
       'partnerPhone': partnerPhone,
       'partnerName': partnerName,
@@ -163,6 +166,7 @@ class GigBooking {
       customerName: map['customerName'] ?? 'Customer',
       addressSector: map['addressSector'] ?? 'Sector 15',
       fullAddress: map['fullAddress'] ?? '',
+      workRequirement: map['workRequirement'] ?? 'सामान्य काम',
       status: map['status'] ?? 'PENDING',
       partnerPhone: map['partnerPhone'] ?? 'None',
       partnerName: map['partnerName'] ?? 'Unassigned',
@@ -245,7 +249,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
     _seedDefaultServicesIfNecessary();
 
-    await Future.delayed(const Duration(milliseconds: 1800));
+    await Future.delayed(const Duration(milliseconds: 1500));
     if (!mounted) return;
 
     if (phone != null && phone.isNotEmpty) {
@@ -632,7 +636,7 @@ class RoleSelectionScreen extends StatelessWidget {
 }
 
 // ============================================================================
-// 6. CUSTOMER DASHBOARD
+// 6. CUSTOMER DASHBOARD (WITH WORK REQUIREMENT & DURATION/COUNT SELECTION)
 // ============================================================================
 class CustomerHomeScreen extends StatefulWidget {
   final String userPhone;
@@ -646,10 +650,20 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   final DatabaseReference _servicesRef = FirebaseDatabase.instance.ref().child('services');
   final DatabaseReference _ordersRef = FirebaseDatabase.instance.ref().child('orders');
 
+  final List<ServiceItem> _fallbackServices = [
+    ServiceItem(id: '1', name: 'सफाई (House Cleaning)', rate: '₹200/घंटा', category: 'Cleaning', iconName: 'cleaning_services'),
+    ServiceItem(id: '2', name: 'कुकिंग (Home Cook)', rate: '₹350/विज़िट', category: 'Cooking', iconName: 'restaurant'),
+    ServiceItem(id: '3', name: 'ब्यूटी & होम सैलून (Salon)', rate: 'पैकेज अनुसार', category: 'Beauty', iconName: 'face'),
+    ServiceItem(id: '4', name: 'सिलाई & फिटिंग (Tailoring)', rate: '₹150/कपड़ा', category: 'Stitching', iconName: 'content_cut'),
+    ServiceItem(id: '5', name: 'ट्यूशन (Home Tuition)', rate: '₹2500/महीना', category: 'Tuition', iconName: 'menu_book'),
+  ];
+
   void _initiateBookingModal(BuildContext context, ServiceItem service) {
     final TextEditingController nameController = TextEditingController(text: 'Customer');
     final TextEditingController addressController = TextEditingController();
+    final TextEditingController noteController = TextEditingController();
     String selectedSector = 'Sector 15';
+    String selectedQuantity = '2 घंटे / 2 सूट';
 
     showModalBottomSheet(
       context: context,
@@ -658,122 +672,107 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
       builder: (context) {
         return Padding(
           padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom + 24, left: 24, right: 24, top: 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text('${service.name} बुक करें', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF4F46E5))),
-              Text('रेट: ${service.rate}', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 16),
-              TextField(controller: nameController, decoration: InputDecoration(labelText: 'आपका नाम', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)))),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                value: selectedSector,
-                decoration: InputDecoration(labelText: 'सेक्टर (Faridabad)', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
-                items: ['Sector 14', 'Sector 15', 'Sector 16', 'Sector 17'].map((sec) {
-                  return DropdownMenuItem(value: sec, child: Text(sec));
-                }).toList(),
-                onChanged: (val) { if (val != null) selectedSector = val; },
-              ),
-              const SizedBox(height: 12),
-              TextField(controller: addressController, decoration: InputDecoration(labelText: 'कोठी / मकान नंबर और गली एड्रेस', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)))),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF4F46E5), padding: const EdgeInsets.symmetric(vertical: 16)),
-                onPressed: () async {
-                  String name = nameController.text.trim();
-                  String address = addressController.text.trim();
-                  if (address.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('कृपया पूरा एड्रेस दर्ज करें!')));
-                    return;
-                  }
-
-                  String orderId = _ordersRef.push().key!;
-                  String generatedOtp = (1000 + Random().nextInt(9000)).toString();
-
-                  GigBooking booking = GigBooking(
-                    orderId: orderId,
-                    serviceName: service.name,
-                    rate: service.rate,
-                    customerPhone: widget.userPhone,
-                    customerName: name,
-                    addressSector: selectedSector,
-                    fullAddress: address,
-                    status: 'PENDING',
-                    partnerPhone: 'None',
-                    partnerName: 'Pending Acceptance',
-                    paymentOtp: generatedOtp,
-                    isPaidToCompany: false,
-                    timestamp: DateTime.now().millisecondsSinceEpoch,
-                  );
-
-                  await _ordersRef.child(orderId).set(booking.toMap());
-
-                  if (context.mounted) {
-                    Navigator.pop(context);
-                    _showPaymentModal(context, booking);
-                  }
-                },
-                child: const Text('कन्फर्म करें और पार्टनर खोजें', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  void _showPaymentModal(BuildContext context, GigBooking booking) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Row(
-            children: const [
-              Icon(Icons.qr_code_scanner_rounded, color: Color(0xFF4F46E5)),
-              SizedBox(width: 8),
-              Text('कंपनी-पेमेंट QR & OTP', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('वर्कर्स को सीधा कैश न दें। काम पूरा होने पर ऐप के QR कोड से पेमेंट करें।', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: Colors.grey)),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.grey.shade300)),
-                child: Column(
-                  children: [
-                    const Icon(Icons.qr_code_2_rounded, size: 120, color: Colors.black87),
-                    const SizedBox(height: 8),
-                    Text('UPI ID: endowork@upi', style: TextStyle(fontSize: 12, color: Colors.grey.shade700, fontWeight: FontWeight.bold)),
-                  ],
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text('${service.name} बुक करें', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF4F46E5))),
+                Text('रेट: ${service.rate}', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: nameController,
+                  decoration: InputDecoration(labelText: 'आपका नाम', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
                 ),
-              ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: const Color(0xFF4F46E5).withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-                child: Column(
-                  children: [
-                    const Text('काम पूरा होने का OTP:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF4F46E5))),
-                    Text(booking.paymentOtp, style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: Color(0xFF4F46E5), letterSpacing: 8)),
-                    const Text('यह कोड काम पूरा होने के बाद ही वर्कर को बताएं।', textAlign: TextAlign.center, style: TextStyle(fontSize: 11, color: Colors.grey)),
-                  ],
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  value: selectedSector,
+                  decoration: InputDecoration(labelText: 'सेक्टर (Faridabad)', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                  items: ['Sector 14', 'Sector 15', 'Sector 16', 'Sector 17'].map((sec) {
+                    return DropdownMenuItem(value: sec, child: Text(sec));
+                  }).toList(),
+                  onChanged: (val) { if (val != null) selectedSector = val; },
                 ),
-              ),
-            ],
-          ),
-          actions: [
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF4F46E5)),
-              onPressed: () => Navigator.pop(context),
-              child: const Text('ठीक है (Dashboard पर जाएं)', style: TextStyle(color: Colors.white)),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: addressController,
+                  decoration: InputDecoration(labelText: 'कोठी / मकान नंबर और गली एड्रेस', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                ),
+                const SizedBox(height: 12),
+                // घंटे / कपड़ों की संख्या चुनने का ड्रॉपडाउन
+                DropdownButtonFormField<String>(
+                  value: selectedQuantity,
+                  decoration: InputDecoration(labelText: 'मात्रा / समय चुनें', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                  items: [
+                    '1 घंटा / 1 सूट',
+                    '2 घंटे / 2 सूट',
+                    '3 घंटे / 3 सूट',
+                    '4 घंटे / 4 सूट',
+                    'पूरा दिन (Full Day)',
+                    'महीने का पैकेज',
+                  ].map((item) {
+                    return DropdownMenuItem(value: item, child: Text(item));
+                  }).toList(),
+                  onChanged: (val) { if (val != null) selectedQuantity = val; },
+                ),
+                const SizedBox(height: 12),
+                // कस्टमर की लिखने की सुविधा
+                TextField(
+                  controller: noteController,
+                  maxLines: 2,
+                  decoration: InputDecoration(
+                    labelText: 'यहाँ लिखकर बताएं (जैसे 2 सूट की फिटिंग या झाड़ू-पोछा)',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF4F46E5), padding: const EdgeInsets.symmetric(vertical: 16)),
+                  onPressed: () async {
+                    String name = nameController.text.trim();
+                    String address = addressController.text.trim();
+                    String customNote = noteController.text.trim();
+                    if (address.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('कृपया पूरा एड्रेस दर्ज करें!')));
+                      return;
+                    }
+
+                    String orderId = _ordersRef.push().key!;
+                    String generatedOtp = (1000 + Random().nextInt(9000)).toString();
+
+                    String finalRequirement = 'मात्रा/समय: $selectedQuantity | विवरण: ${customNote.isEmpty ? "सामान्य" : customNote}';
+
+                    GigBooking booking = GigBooking(
+                      orderId: orderId,
+                      serviceName: service.name,
+                      rate: service.rate,
+                      customerPhone: widget.userPhone,
+                      customerName: name,
+                      addressSector: selectedSector,
+                      fullAddress: address,
+                      workRequirement: finalRequirement,
+                      status: 'PENDING',
+                      partnerPhone: 'None',
+                      partnerName: 'Pending Acceptance',
+                      paymentOtp: generatedOtp,
+                      isPaidToCompany: false,
+                      timestamp: DateTime.now().millisecondsSinceEpoch,
+                    );
+
+                    await _ordersRef.child(orderId).set(booking.toMap());
+
+                    if (context.mounted) {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('ऑर्डर सफलता से बुक हो गया! पार्टनर का इंतज़ार है।'), backgroundColor: Colors.green),
+                      );
+                    }
+                  },
+                  child: const Text('ऑर्डर कंफर्म करें (Book Order)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                ),
+              ],
             ),
-          ],
+          ),
         );
       },
     );
@@ -831,13 +830,17 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
             StreamBuilder(
               stream: _servicesRef.onValue,
               builder: (context, snapshot) {
-                if (!snapshot.hasData || snapshot.data?.snapshot.value == null) {
-                  return const Center(child: Padding(padding: EdgeInsets.all(32.0), child: CircularProgressIndicator()));
-                }
+                List<ServiceItem> services = _fallbackServices;
 
-                Map map = (snapshot.data!.snapshot.value as Map);
-                List<ServiceItem> services = [];
-                map.forEach((k, v) => services.add(ServiceItem.fromMap(k, v)));
+                if (snapshot.hasData && snapshot.data?.snapshot.value != null) {
+                  try {
+                    Map map = (snapshot.data!.snapshot.value as Map);
+                    services = [];
+                    map.forEach((k, v) => services.add(ServiceItem.fromMap(k, v)));
+                  } catch (e) {
+                    services = _fallbackServices;
+                  }
+                }
 
                 return GridView.builder(
                   shrinkWrap: true,
@@ -914,12 +917,28 @@ class CustomerOrdersListScreen extends StatelessWidget {
               var order = myOrders[index];
               return Card(
                 margin: const EdgeInsets.only(bottom: 12),
-                child: ListTile(
-                  title: Text(order.serviceName, style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text('एड्रेस: ${order.addressSector}, ${order.fullAddress}\nपार्टनर: ${order.partnerName} (${order.partnerPhone})\nOTP: ${order.paymentOtp}'),
-                  trailing: Chip(
-                    label: Text(order.status, style: const TextStyle(color: Colors.white, fontSize: 11)),
-                    backgroundColor: order.status == 'ACCEPTED' ? Colors.green : Colors.orange,
+                child: Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.between,
+                        children: [
+                          Text(order.serviceName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                          Chip(
+                            label: Text(order.status, style: const TextStyle(color: Colors.white, fontSize: 11)),
+                            backgroundColor: order.status == 'ACCEPTED' ? Colors.green : Colors.orange,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text('पता: ${order.addressSector}, ${order.fullAddress}', style: const TextStyle(fontSize: 13, color: Colors.grey)),
+                      const SizedBox(height: 4),
+                      Text('विवरण: ${order.workRequirement}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF4F46E5))),
+                      const Divider(height: 16),
+                      Text('पार्टनर: ${order.partnerName} (${order.partnerPhone})\nOTP: ${order.paymentOtp}', style: const TextStyle(fontSize: 12)),
+                    ],
                   ),
                 ),
               );
@@ -1068,7 +1087,7 @@ class _PartnerDashboardScreenState extends State<PartnerDashboardScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              mainAxisAlignment: MainAxisAlignment.between,
                               children: [
                                 Text(gig.serviceName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF4F46E5))),
                                 Text(gig.rate, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.green)),
@@ -1081,6 +1100,12 @@ class _PartnerDashboardScreenState extends State<PartnerDashboardScreen> {
                                 const SizedBox(width: 4),
                                 Text('${gig.addressSector} - ${gig.fullAddress}', style: const TextStyle(fontWeight: FontWeight.w500)),
                               ],
+                            ),
+                            const SizedBox(height: 6),
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(8)),
+                              child: Text('काम का विवरण: ${gig.workRequirement}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87)),
                             ),
                             const SizedBox(height: 4),
                             Text('कस्टमर: ${gig.customerName}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
@@ -1227,7 +1252,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            mainAxisAlignment: MainAxisAlignment.between,
                             children: [
                               Text(gig.serviceName, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                               Chip(
@@ -1238,9 +1263,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                           ),
                           Text('कस्टमर: ${gig.customerName} (+91 ${gig.customerPhone})', style: const TextStyle(fontSize: 13)),
                           Text('पता: ${gig.addressSector}, ${gig.fullAddress}', style: const TextStyle(fontSize: 13, color: Colors.grey)),
+                          const SizedBox(height: 4),
+                          Text('विवरण: ${gig.workRequirement}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF4F46E5))),
                           const Divider(height: 20),
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            mainAxisAlignment: MainAxisAlignment.between,
                             children: [
                               Text(
                                 isAccepted ? 'बुक किया: ${gig.partnerName} (+91 ${gig.partnerPhone})' : 'पार्टनर: अभी एक्सेप्ट नहीं हुआ',
